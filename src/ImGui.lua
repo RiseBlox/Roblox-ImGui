@@ -304,7 +304,6 @@ local function justifyText(text, width, font, fontSize)
                     table.insert(lines, {words = current, width = currentWidth})
                     current, currentWidth = {}, 0
                 end
-                if #current > 0 then currentWidth += spaceWidth end
                 table.insert(current, word)
                 currentWidth += wordWidth
             end
