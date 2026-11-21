@@ -429,6 +429,212 @@ function ImGui:RadioButton(label, active, callback, id)
 end
 
 -- Dear ImGui-style normalized progress value with an optional overlay label.
+
+-- Selectable: row selection with optional selected state and callback.
+function ImGui:Selectable(label, selected, callback, id)
+    local key = id or ("Selectable:" .. tostring(label))
+    local button = self:_add(key, "TextButton", {
+        Name = "Selectable", Size = UDim2.new(1, 0, 0, 20),
+        BackgroundColor3 = selected and self.Style.HeaderActive or self.Style.Header,
+        BackgroundTransparency = selected and 0.35 or 1,
+        BorderSizePixel = 0, AutoButtonColor = false, Text = tostring(label),
+        TextColor3 = self.Style.Text, Font = self.Style.Font, TextSize = self.Style.FontSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    if button:GetAttribute("ImGuiSelectableConnected") ~= true then
+        button:SetAttribute("ImGuiSelectableConnected", true)
+        button.MouseEnter:Connect(function()
+            button.BackgroundColor3 = self.Style.HeaderHovered
+            button.BackgroundTransparency = 0.35
+        end)
+        button.MouseLeave:Connect(function()
+            button.BackgroundColor3 = button:GetAttribute("ImGuiSelected") and self.Style.HeaderActive or self.Style.Header
+            button.BackgroundTransparency = button:GetAttribute("ImGuiSelected") and 0.35 or 1
+        end)
+        button.Activated:Connect(function()
+            if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
+            local fn = self._callbacks and self._callbacks[key]
+            if fn then fn(not (button:GetAttribute("ImGuiSelected") == true)) end
+        end)
+    end
+    button:SetAttribute("ImGuiSelected", selected == true)
+    button.BackgroundColor3 = selected and self.Style.HeaderActive or self.Style.Header
+    button.BackgroundTransparency = selected and 0.35 or 1
+    self._callbacks = self._callbacks or {}
+    self._callbacks[key] = callback
+    return selected == true
+end
+
+-- Combo uses a Roblox-native popup list. selected is a 1-based index or an item string.
+function ImGui:Combo(label, selected, items, callback, id)
+    local key = id or ("Combo:" .. tostring(label))
+    items = items or {}
+    local selectedIndex = type(selected) == "number" and math.floor(selected) or table.find(items, selected)
+    selectedIndex = math.clamp(selectedIndex or 1, 1, math.max(#items, 1))
+    local frame = self:_add(key, "Frame", {
+        Name = "Combo", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1,
+        ClipsDescendants = false, ZIndex = 5,
+    })
+    local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
+        Name = "Label", Size = UDim2.new(0.36, 0, 1, 0), BackgroundTransparency = 1,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    title.Text = tostring(label)
+    local choice = frame:FindFirstChild("Choice") or make("TextButton", frame, {
+        Name = "Choice", Position = UDim2.new(0.38, 0, 0, 1), Size = UDim2.new(0.62, 0, 0, 24),
+        BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
+        BorderSizePixel = 0, AutoButtonColor = false, Font = self.Style.Font,
+        TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 6,
+    })
+    choice.Text = "  " .. tostring(items[selectedIndex] or "")
+    local popup = frame:FindFirstChild("Popup") or make("Frame", frame, {
+        Name = "Popup", Position = UDim2.new(0.38, 0, 0, 25),
+        Size = UDim2.new(0.62, 0, 0, math.min(#items, 6) * 22),
+        BackgroundColor3 = self.Style.PopupBg, BorderSizePixel = 1,
+        BorderColor3 = self.Style.Border, Visible = false, ZIndex = 20,
+    })
+    popup.Size = UDim2.new(0.62, 0, 0, math.min(#items, 6) * 22)
+    local layout = popup:FindFirstChildOfClass("UIListLayout") or vertical(popup, 0)
+    layout.Padding = UDim.new(0, 0)
+    for index, item in ipairs(items) do
+        local option = popup:FindFirstChild("Option_" .. index) or make("TextButton", popup, {
+            Name = "Option_" .. index, Size = UDim2.new(1, 0, 0, 22),
+            BackgroundColor3 = self.Style.PopupBg, BorderSizePixel = 0,
+            AutoButtonColor = false, Font = self.Style.Font, TextSize = self.Style.FontSize,
+            TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 21,
+        })
+        option.LayoutOrder = index
+        option.Text = "  " .. tostring(item)
+        option.Visible = true
+        option.BackgroundColor3 = index == selectedIndex and self.Style.HeaderActive or self.Style.PopupBg
+        if option:GetAttribute("ImGuiOptionConnected") ~= true then
+            option:SetAttribute("ImGuiOptionConnected", true)
+            option.MouseEnter:Connect(function() option.BackgroundColor3 = self.Style.HeaderHovered end)
+            option.MouseLeave:Connect(function()
+                option.BackgroundColor3 = option:GetAttribute("ImGuiChosen") and self.Style.HeaderActive or self.Style.PopupBg
+            end)
+            option.Activated:Connect(function()
+                if option:GetAttribute("ImGuiInputAllowed") ~= true then return end
+                frame:SetAttribute("ImGuiComboIndex", index)
+                choice.Text = "  " .. tostring(items[index] or "")
+                popup.Visible = false
+                local fn = self._callbacks and self._callbacks[key]
+                if fn then fn(index, items[index]) end
+            end)
+        end
+        option:SetAttribute("ImGuiChosen", index == selectedIndex)
+    end
+    for _, child in ipairs(popup:GetChildren()) do
+        if child:IsA("TextButton") then child.Visible = tonumber(child.Name:match("Option_(%d+)")) ~= nil
+            and tonumber(child.Name:match("Option_(%d+)")) <= #items end
+    end
+    if choice:GetAttribute("ImGuiComboConnected") ~= true then
+        choice:SetAttribute("ImGuiComboConnected", true)
+        choice.Activated:Connect(function()
+            if choice:GetAttribute("ImGuiInputAllowed") ~= true then return end
+            popup.Visible = not popup.Visible
+        end)
+    end
+    frame:SetAttribute("ImGuiComboIndex", selectedIndex)
+    self._callbacks = self._callbacks or {}
+    self._callbacks[key] = callback
+    return selectedIndex
+end
+
+-- CollapsingHeader and TreeNode expose open state; gate child submissions with the returned boolean.
+function ImGui:CollapsingHeader(label, id)
+    local key = id or ("CollapsingHeader:" .. tostring(label))
+    self._treeState = self._treeState or {}
+    local open = self._treeState[key] == true
+    local button = self:_add(key, "TextButton", {
+        Name = "CollapsingHeader", Size = UDim2.new(1, 0, 0, 22),
+        BackgroundColor3 = self.Style.Header, BackgroundTransparency = 0.65,
+        BorderSizePixel = 0, AutoButtonColor = false, Font = self.Style.Font,
+        TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Left, Text = (open and "▾  " or "▸  ") .. tostring(label),
+    })
+    if button:GetAttribute("ImGuiHeaderConnected") ~= true then
+        button:SetAttribute("ImGuiHeaderConnected", true)
+        button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered end)
+        button.MouseLeave:Connect(function() button.BackgroundColor3 = self.Style.Header end)
+        button.Activated:Connect(function()
+            if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
+            local nextOpen = not (self._treeState and self._treeState[key] == true)
+            self._treeState[key] = nextOpen
+            button:SetAttribute("ImGuiOpen", nextOpen)
+            button.Text = (nextOpen and "▾  " or "▸  ") .. tostring(label)
+        end)
+    end
+    button:SetAttribute("ImGuiOpen", open)
+    return open
+end
+
+function ImGui:TreeNode(label, id)
+    local key = id or ("TreeNode:" .. tostring(label))
+    self._treeState = self._treeState or {}
+    local open = self._treeState[key] == true
+    local button = self:_add(key, "TextButton", {
+        Name = "TreeNode", Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = (open and "▼  " or "▶  ") .. tostring(label),
+    })
+    if button:GetAttribute("ImGuiTreeConnected") ~= true then
+        button:SetAttribute("ImGuiTreeConnected", true)
+        button.Activated:Connect(function()
+            if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
+            local nextOpen = not (self._treeState and self._treeState[key] == true)
+            self._treeState[key] = nextOpen
+            button:SetAttribute("ImGuiOpen", nextOpen)
+            button.Text = (nextOpen and "▼  " or "▶  ") .. tostring(label)
+        end)
+    end
+    button:SetAttribute("ImGuiOpen", open)
+    return open
+end
+
+function ImGui:TreePop()
+    -- Tree contents are conditionally submitted by the caller; this balances the Dear ImGui-style API.
+end
+
+function ImGui:BulletText(text)
+    local frame = self:_add("BulletText:" .. tostring(text) .. ":" .. self._order, "Frame", {
+        Name = "BulletText", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1,
+    })
+    make("TextLabel", frame, {
+        Name = "Bullet", Size = UDim2.fromOffset(12, 18), BackgroundTransparency = 1,
+        Text = "•", TextColor3 = self.Style.Text, Font = self.Style.Font, TextSize = self.Style.FontSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    make("TextLabel", frame, {
+        Name = "Text", Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -12, 1, 0),
+        BackgroundTransparency = 1, Text = tostring(text), TextColor3 = self.Style.Text,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    return frame
+end
+
+-- Image accepts a Roblox image asset/content ID or an existing image content string.
+function ImGui:Image(image, size, config)
+    config = config or {}
+    local key = config.ID or ("Image:" .. tostring(image))
+    local object = self:_add(key, "ImageLabel", {
+        Name = "Image", Size = size or UDim2.fromOffset(64, 64),
+        BackgroundTransparency = config.BackgroundTransparency == nil and 1 or config.BackgroundTransparency,
+        BackgroundColor3 = config.BackgroundColor or self.Style.FrameBg,
+        BorderSizePixel = 0, ScaleType = config.ScaleType or Enum.ScaleType.Fit,
+        ImageColor3 = config.TintColor or Color3.new(1, 1, 1),
+        ImageTransparency = config.ImageTransparency or 0,
+    })
+    object.Image = tostring(image or "")
+    if config.Radius and not object:FindFirstChildOfClass("UICorner") then round(object, config.Radius) end
+    return object
+end
+
 function ImGui:ProgressBar(fraction, size, overlay, id)
     local key = id or ("ProgressBar:" .. tostring(overlay or ""))
     local bar = self:_add(key, "Frame", {
