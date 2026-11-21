@@ -11,16 +11,22 @@ ImGui.UpstreamTarget = "Dear ImGui 1.93.x"
 ImGui.__index = ImGui
 
 local DEFAULT_STYLE = {
-    WindowBg = Color3.fromRGB(24, 24, 27), ChildBg = Color3.fromRGB(30, 30, 34),
-    Border = Color3.fromRGB(65, 65, 72), Text = Color3.fromRGB(235, 235, 238),
-    TextDisabled = Color3.fromRGB(135, 135, 143), FrameBg = Color3.fromRGB(45, 45, 51),
-    FrameBgHovered = Color3.fromRGB(58, 58, 67), TitleBg = Color3.fromRGB(31, 31, 36),
-    Button = Color3.fromRGB(55, 55, 63), ButtonHovered = Color3.fromRGB(72, 72, 83),
-    Accent = Color3.fromRGB(105, 145, 220), CheckMark = Color3.fromRGB(125, 170, 255),
-    SliderGrab = Color3.fromRGB(115, 155, 230), Separator = Color3.fromRGB(65, 65, 73),
-    Font = Enum.Font.Code, FontSize = 14, WindowRounding = 7, FrameRounding = 4,
-    WindowPadding = Vector2.new(10, 10), ItemSpacing = Vector2.new(7, 6), BorderSize = 1,
-    ScrollbarSize = 6,
+    -- Color palette approximating Dear ImGui's classic dark-blue style.
+    WindowBg = Color3.fromRGB(15, 15, 15), ChildBg = Color3.fromRGB(24, 24, 24),
+    PopupBg = Color3.fromRGB(24, 24, 24), Border = Color3.fromRGB(92, 92, 92),
+    Text = Color3.fromRGB(235, 235, 235), TextDisabled = Color3.fromRGB(128, 128, 128),
+    FrameBg = Color3.fromRGB(41, 48, 59), FrameBgHovered = Color3.fromRGB(66, 112, 169),
+    FrameBgActive = Color3.fromRGB(66, 150, 250), TitleBg = Color3.fromRGB(10, 10, 10),
+    TitleBgActive = Color3.fromRGB(25, 55, 88), Button = Color3.fromRGB(66, 112, 169),
+    ButtonHovered = Color3.fromRGB(66, 150, 250), ButtonActive = Color3.fromRGB(45, 105, 180),
+    Header = Color3.fromRGB(66, 112, 169), HeaderHovered = Color3.fromRGB(66, 150, 250),
+    HeaderActive = Color3.fromRGB(45, 105, 180), Accent = Color3.fromRGB(66, 150, 250),
+    CheckMark = Color3.fromRGB(66, 150, 250), SliderGrab = Color3.fromRGB(66, 150, 250),
+    Separator = Color3.fromRGB(72, 72, 72), ScrollbarBg = Color3.fromRGB(20, 20, 20),
+    ScrollbarGrab = Color3.fromRGB(75, 75, 75), ScrollbarGrabHovered = Color3.fromRGB(105, 105, 105),
+    Font = Enum.Font.Arial, FontSize = 14, WindowRounding = 4, FrameRounding = 3,
+    WindowPadding = Vector2.new(8, 8), ItemSpacing = Vector2.new(8, 4), BorderSize = 1,
+    ScrollbarSize = 12,
 }
 
 local function make(className, parent, properties)
@@ -114,12 +120,12 @@ function ImGui:_getWindow(name, flags)
     local root = make("Frame", self.ScreenGui, {
         Name = "Window_" .. name, Position = flags.Position or UDim2.fromOffset(100, 100),
         Size = flags.Size or UDim2.fromOffset(430, 360), BackgroundColor3 = style.WindowBg,
-        BorderSizePixel = 0, Active = true, ClipsDescendants = false,
+        BorderSizePixel = 0, Active = true, ClipsDescendants = true,
     })
     round(root, style.WindowRounding)
     make("UIStroke", root, { Color = style.Border, Thickness = style.BorderSize })
     local title = make("TextButton", root, {
-        Name = "TitleBar", Size = UDim2.new(1, 0, 0, 32), BackgroundColor3 = style.TitleBg,
+        Name = "TitleBar", Size = UDim2.new(1, 0, 0, 26), BackgroundColor3 = style.TitleBgActive,
         BorderSizePixel = 0, Text = name, TextColor3 = style.Text, Font = style.Font,
         TextSize = style.FontSize, TextXAlignment = Enum.TextXAlignment.Left,
         AutoButtonColor = false, Active = true,
@@ -136,7 +142,7 @@ function ImGui:_getWindow(name, flags)
         BackgroundTransparency = 1, BorderSizePixel = 0,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
-        ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.Border,
+        ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.ScrollbarGrab, ScrollBarImageTransparency = 0,
     })
     vertical(content, style.ItemSpacing.Y)
 
@@ -173,10 +179,10 @@ function ImGui:Begin(name, flags)
     window.Title.Visible = not flags.NoTitleBar
     window.Content.Position = flags.NoTitleBar
         and UDim2.fromOffset(self.Style.WindowPadding.X, self.Style.WindowPadding.Y)
-        or UDim2.fromOffset(self.Style.WindowPadding.X, 39)
+        or UDim2.fromOffset(self.Style.WindowPadding.X, 33)
     window.Content.Size = flags.NoTitleBar
         and UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -self.Style.WindowPadding.Y * 2)
-        or UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -47)
+        or UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -41)
     table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order })
     self._scope = "Window:" .. tostring(name)
     self.CurrentWindow, self.CurrentParent = window, window.Content
@@ -286,7 +292,7 @@ function ImGui:RadioButton(label, active, callback, id)
     local dot = circle:FindFirstChild("Dot") or make("Frame", circle, {
         Name = "Dot", AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(9, 9),
-        BackgroundColor3 = self.Style.CheckMark, BorderSizePixel = 0,
+        BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
     })
     if not dot:FindFirstChildOfClass("UICorner") then
         make("UICorner", dot, { CornerRadius = UDim.new(1, 0) })
@@ -349,7 +355,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     })
     if not track:FindFirstChildOfClass("UICorner") then round(track, 4) end
     local fill = track:FindFirstChild("Fill") or make("Frame", track, {
-        Name = "Fill", BackgroundColor3 = self.Style.SliderGrab, BorderSizePixel = 0,
+        Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
     })
     if not fill:FindFirstChildOfClass("UICorner") then round(fill, 4) end
     local function update(input)
@@ -459,7 +465,7 @@ function ImGui:BeginChild(id, size)
         BackgroundColor3 = self.Style.ChildBg, BorderSizePixel = 0, ClipsDescendants = true,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
-        ScrollBarThickness = self.Style.ScrollbarSize, ScrollBarImageColor3 = self.Style.Border,
+        ScrollBarThickness = self.Style.ScrollbarSize, ScrollBarImageColor3 = self.Style.ScrollbarGrab,
     })
     if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.FrameRounding) end
     if not child:FindFirstChildOfClass("UIListLayout") then vertical(child, self.Style.ItemSpacing.Y) end
