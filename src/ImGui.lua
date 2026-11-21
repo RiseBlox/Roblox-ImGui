@@ -285,8 +285,11 @@ end
 local function justifyText(text, width, font, fontSize)
     if width <= 1 then return text end
     local output = {}
-    local spaceWidth = TextService:GetTextSize("\u{2002}", fontSize, font, Vector2.new(10000, fontSize + 4)).X
-    spaceWidth = math.max(spaceWidth, 1)
+    local emSpace = "\u{2003}"
+    local spaceWidth = math.max(TextService:GetTextSize(emSpace, fontSize, font, Vector2.new(10000, fontSize + 4)).X, 1)
+    local function measure(value)
+        return TextService:GetTextSize(value, fontSize, font, Vector2.new(10000, fontSize + 4)).X
+    end
     for paragraph in (text .. "\n"):gmatch("(.-)\n") do
         if paragraph == "" then
             table.insert(output, "")
@@ -295,7 +298,7 @@ local function justifyText(text, width, font, fontSize)
             for word in paragraph:gmatch("%S+") do table.insert(words, word) end
             local lines, current, currentWidth = {}, {}, 0
             for _, word in ipairs(words) do
-                local wordWidth = TextService:GetTextSize(word, fontSize, font, Vector2.new(10000, fontSize + 4)).X
+                local wordWidth = measure(word)
                 local candidateWidth = currentWidth + (#current > 0 and spaceWidth or 0) + wordWidth
                 if #current > 0 and candidateWidth > width then
                     table.insert(lines, {words = current, width = currentWidth})
@@ -306,13 +309,41 @@ local function justifyText(text, width, font, fontSize)
                 currentWidth += wordWidth
             end
             if #current > 0 then table.insert(lines, {words = current, width = currentWidth, last = true}) end
+
             for _, line in ipairs(lines) do
-                local gapCount = math.max(#line.words - 1, 0)
-                if gapCount == 0 or line.last then
+                local gaps = #line.words - 1
+                if gaps <= 0 or line.last then
                     table.insert(output, table.concat(line.words, " "))
                 else
-                    local extraSpaces = math.max(1, math.floor((width - line.width) / (spaceWidth * gapCount) + 0.5))
-                    table.insert(output, table.concat(line.words, string.rep("\u{2002}", extraSpaces)))
+                    local available = math.max(0, width - line.width)
+                    local perGap = math.max(1, math.floor(available / (spaceWidth * gaps)))
+                    local remainder = available - perGap * spaceWidth * gaps
+                    local gapParts = {}
+                    for gapIndex = 1, gaps do
+                        local count = perGap
+                        if remainder >= spaceWidth then
+                            count += 1
+                            remainder -= spaceWidth
+                        end
+                        gapParts[gapIndex] = string.rep(emSpace, count)
+                    end
+                    local pieces = {line.words[1]}
+                    for gapIndex = 1, gaps do
+                        table.insert(pieces, gapParts[gapIndex])
+                        table.insert(pieces, line.words[gapIndex + 1])
+                    end
+                    local justified = table.concat(pieces)
+                    while measure(justified) > width and perGap > 1 do
+                        perGap -= 1
+                        for gapIndex = 1, gaps do gapParts[gapIndex] = string.rep(emSpace, perGap) end
+                        pieces = {line.words[1]}
+                        for gapIndex = 1, gaps do
+                            table.insert(pieces, gapParts[gapIndex])
+                            table.insert(pieces, line.words[gapIndex + 1])
+                        end
+                        justified = table.concat(pieces)
+                    end
+                    table.insert(output, justified)
                 end
             end
         end
@@ -787,7 +818,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     assert(maxValue > minValue, "SliderFloat maxValue must be greater than minValue")
     local key = id or ("Slider:" .. tostring(label))
     local frame = self:_add(key, "Frame", {
-        Name = "Slider", Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1,
+        Name = "Slider", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
         Name = "Label", Position = UDim2.new(0.70, 0, 0, 0),
@@ -797,7 +828,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     })
     title.Text = tostring(label)
     local track = frame:FindFirstChild("Track") or make("TextButton", frame, {
-        Name = "Track", Position = UDim2.fromOffset(0, 3), Size = UDim2.new(0.64, 0, 0, 18),
+        Name = "Track", Position = UDim2.new(0, 0, 0.5, -9), Size = UDim2.new(0.64, 0, 0, 18),
         BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
         BorderSizePixel = 0, Text = "", AutoButtonColor = false,
     })
