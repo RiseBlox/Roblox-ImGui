@@ -70,7 +70,7 @@ function ImGui.new(config)
         ScreenGui = screen, Style = table.clone(DEFAULT_STYLE), Windows = {}, Widgets = {},
         WindowStack = {}, CurrentWindow = nil, CurrentParent = nil, _scope = "", _scopeStack = {},
         FrameNumber = 0, _idStack = {}, _order = 0, _windowOrder = 0, _connections = {}, _callbacks = {},
-        _frameActive = false, _destroyed = false,
+        _frameActive = false, _destroyed = false, _treeStack = {},
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
 
@@ -131,6 +131,7 @@ function ImGui:NewFrame()
     self._order = 0
     self.WindowStack = {}
     self._scopeStack = {}
+    self._treeStack = {}
     self._scope = ""
     self.CurrentWindow, self.CurrentParent = nil, nil
     self._frameActive = true
@@ -493,7 +494,7 @@ function ImGui:Combo(label, selected, items, callback, id)
         Name = "Popup", Position = UDim2.new(0.38, 0, 0, 25),
         Size = UDim2.new(0.62, 0, 0, math.min(#items, 6) * 22),
         BackgroundColor3 = self.Style.PopupBg, BorderSizePixel = 1,
-        BorderColor3 = self.Style.Border, Visible = false, ZIndex = 20,
+        BorderColor3 = self.Style.Border, Visible = false, ZIndex = 20, ClipsDescendants = true,
     })
     popup.Size = UDim2.new(0.62, 0, 0, math.min(#items, 6) * 22)
     local layout = popup:FindFirstChildOfClass("UIListLayout") or make("UIListLayout", popup, { FillDirection = Enum.FillDirection.Vertical, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 0) })
@@ -609,11 +610,30 @@ function ImGui:TreeNode(label, id)
         end)
     end
     button:SetAttribute("ImGuiOpen", open)
+    if open then
+        local parent = self.CurrentParent
+        local children = self:_widget("TreeChildren:" .. key, "Frame", parent, {
+            Name = "TreeChildren", Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
+        })
+        if not children:FindFirstChildOfClass("UIPadding") then
+            make("UIPadding", children, { PaddingLeft = UDim.new(0, 14) })
+        end
+        if not children:FindFirstChildOfClass("UIListLayout") then vertical(children, self.Style.ItemSpacing.Y) end
+        table.insert(self._treeStack, {
+            Parent = self.CurrentParent, Scope = self._scope, Order = self._order,
+        })
+        self.CurrentParent = children
+        self._scope = self._scope .. "/Tree:" .. key
+        self._order = 0
+    end
     return open
 end
 
 function ImGui:TreePop()
-    -- Tree contents are conditionally submitted by the caller; this balances the Dear ImGui-style API.
+    assert(#self._treeStack > 0, "TreePop() called without a matching open TreeNode()")
+    local previous = table.remove(self._treeStack)
+    self.CurrentParent, self._scope, self._order = previous.Parent, previous.Scope, previous.Order
 end
 
 function ImGui:BulletText(text)
@@ -928,6 +948,7 @@ function ImGui:Render()
     assert(not self._destroyed, "This ImGui context has been destroyed")
     assert(self._frameActive, "Render() called without NewFrame()")
     assert(#self.WindowStack == 0, "Unclosed Begin()/BeginChild(): call End()/EndChild() before Render()")
+    assert(#self._treeStack == 0, "Unclosed TreeNode(): call TreePop() before Render()")
     for _, object in pairs(self.Widgets) do
         if object.Parent then object.Visible = object:GetAttribute("ImGuiLastSeen") == self.FrameNumber end
     end
@@ -947,6 +968,7 @@ function ImGui:Destroy()
     table.clear(self.Windows)
     table.clear(self.WindowStack)
     table.clear(self._scopeStack)
+    table.clear(self._treeStack)
     table.clear(self._callbacks or {})
     table.clear(self._progressBars or {})
  
