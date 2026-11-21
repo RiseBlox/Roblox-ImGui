@@ -145,7 +145,7 @@ function ImGui:_getWindow(name, flags)
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
         ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.ScrollbarGrab,
-        ScrollBarImageTransparency = 0, ScrollBarBackgroundColor3 = style.ScrollbarBg,
+        ScrollBarImageTransparency = 0,
     })
     make("UIPadding", content, {
         PaddingLeft = UDim.new(0, style.WindowPadding.X),
@@ -555,7 +555,6 @@ function ImGui:BeginChild(id, size)
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
         ScrollBarThickness = self.Style.ScrollbarSize, ScrollBarImageColor3 = self.Style.ScrollbarGrab,
-        ScrollBarBackgroundColor3 = self.Style.ScrollbarBg,
     })
     if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.ChildRounding) end
     if not child:FindFirstChildOfClass("UIPadding") then
