@@ -76,7 +76,9 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 | Text(text, config?) | Render text |
 | Style fields | WindowPadding, FramePadding, ItemSpacing, ItemInnerSpacing, WindowRounding, ChildRounding, FrameRounding, BorderSize, FrameBorderSize, ScrollbarSize, GrabMinSize, TitleBarHeight, colors, and font settings |
 | Button(label, config?) | Render a button |
-| Checkbox(label, value, callback, id?) | Render a checkbox |\n| RadioButton(label, active, callback?, id?) | Render a radio button; callback runs when clicked |\n| ProgressBar(fraction, size?, overlay?, id?) | Render a normalized progress bar |
+| Checkbox(label, value, callback, id?) | Render a checkbox |
+| RadioButton(label, active, callback?, id?) | Render a radio button; callback runs when clicked |
+| ProgressBar(fraction, size?, overlay?, id?) | Render a normalized progress bar |
 | SliderFloat / SliderInt | Render numeric sliders |
 | InputText(label, value, callback, config?) | Render a text input |
 | Separator(text?) / Spacing() | Layout helpers |
