@@ -168,7 +168,8 @@ function ImGui:_getWindow(name, flags)
     })
     make("UIPadding", content, {
         PaddingLeft = UDim.new(0, style.WindowPadding.X),
-        PaddingRight = UDim.new(0, style.WindowPadding.X),
+        -- Keep all content clear of the ScrollingFrame's overlaid scrollbar.
+        PaddingRight = UDim.new(0, style.WindowPadding.X + style.ScrollbarSize + 4),
         PaddingTop = UDim.new(0, style.WindowPadding.Y),
         PaddingBottom = UDim.new(0, style.WindowPadding.Y),
     })
@@ -368,18 +369,10 @@ function ImGui:Text(text, config)
         label.TextWrapped = false
         local function refreshJustification()
             if not label.Parent then return end
-            local width = label.AbsoluteSize.X
-            -- ScrollingFrame scrollbars occupy the right edge of the visible content
-            -- area on Roblox. Reserve that width so justified lines never render
-            -- underneath the scrollbar thumb or track.
-            local ancestor = label.Parent
-            while ancestor and not ancestor:IsA("ScrollingFrame") do
-                ancestor = ancestor.Parent
-            end
-            if ancestor then
-                width -= (ancestor.ScrollBarThickness or 0) + 4
-            end
-            width = math.max(width, 1)
+            -- The owning window/child ScrollingFrame reserves scrollbar space
+            -- through its right UIPadding, so the label's own width is the true
+            -- usable text width. Do not subtract the scrollbar twice here.
+            local width = math.max(label.AbsoluteSize.X, 1)
             label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
         end
         refreshJustification()
@@ -1197,7 +1190,8 @@ function ImGui:BeginChild(id, size)
     if not child:FindFirstChildOfClass("UIPadding") then
         make("UIPadding", child, {
             PaddingLeft = UDim.new(0, self.Style.WindowPadding.X),
-            PaddingRight = UDim.new(0, self.Style.WindowPadding.X),
+            -- Child scrollbars also overlay the right edge of their content.
+            PaddingRight = UDim.new(0, self.Style.WindowPadding.X + self.Style.ScrollbarSize + 4),
             PaddingTop = UDim.new(0, self.Style.WindowPadding.Y),
             PaddingBottom = UDim.new(0, self.Style.WindowPadding.Y),
         })
