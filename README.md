@@ -17,10 +17,11 @@ A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
 
 - Context creation and teardown: ImGui.new and Destroy
 - Frame lifecycle: NewFrame, Begin, End, Render
-- Draggable windows, vertically scrollable window content, independently scrollable child regions, and a classic Dear ImGui-inspired dark-blue theme
+- Draggable windows, vertically scrollable window content, independently scrollable child regions, and a Dear ImGui-inspired dark theme with blue accents
+- Compact widget rows with right-side labels, square frames, minimal rounding, active-window title styling, and visible slider grabs
 - ID stack: PushID, PopID, GetID
 - Text, buttons, checkboxes, radio buttons, progress bars, float/integer sliders, text inputs
-- Separators, spacing, basic style palette, built-in demo
+- Separators, spacing, a configurable ImGui-style palette/layout, built-in demo
 - Retained Roblox instances keyed by widget ID
 
 This is an initial foundation, not feature parity. The core lifecycle is being hardened before the larger widget set is added.
@@ -64,11 +65,12 @@ end)
 
 | Method | Purpose |
 | --- | --- |
-| ImGui.new(config) | Create a GUI context |
+| ImGui.new(config) | Create a GUI context; `config.Style` overrides style values |
 | NewFrame() / Render() | Start and finish a frame |
 | Begin(name, flags) / End() | Begin/end a window |
 | BeginChild(id, size) / EndChild() | Begin/end a child region |
 | Text(text, config?) | Render text |
+| Style fields | WindowPadding, FramePadding, ItemSpacing, ItemInnerSpacing, WindowRounding, ChildRounding, FrameRounding, BorderSize, FrameBorderSize, ScrollbarSize, GrabMinSize, TitleBarHeight, colors, and font settings |
 | Button(label, config?) | Render a button |
 | Checkbox(label, value, callback, id?) | Render a checkbox |\n| RadioButton(label, active, callback?, id?) | Render a radio button; callback runs when clicked |\n| ProgressBar(fraction, size?, overlay?, id?) | Render a normalized progress bar |
 | SliderFloat / SliderInt | Render numeric sliders |
@@ -82,7 +84,7 @@ end)
 
 1. Core correctness: frame lifecycle guards, stable widget identity across windows/children, lifecycle cleanup, input connection ownership, nested scopes, and Studio/executor smoke tests.
 2. Widget coverage: radio buttons, combos, selectables, progress bars, color editing, trees, tabs, tables, menus, popups, modal dialogs.
-3. Layout: groups, columns, table sizing, advanced clipping and layout rules.
+3. Layout: groups, columns, table sizing, advanced clipping, item widths, and layout rules.
 4. Interaction: keyboard navigation, focus, shortcuts, gamepad navigation, drag-and-drop.
 5. Drawing: draw lists, primitives, clipping, gradients, images and custom callbacks.
 6. Window systems: resizing, collapsing, docking and multi-window management where Roblox permits.
