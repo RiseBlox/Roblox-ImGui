@@ -85,6 +85,22 @@ function ImGui:GetID(id)
 end
 
 function ImGui:_widget(id, className, parent, properties)
+    -- Roblox scrollbars overlay the ScrollingFrame's child canvas. UIPadding
+    -- alone does not constrain Scale-sized children, so reserve a real,
+    -- fixed-width right gutter on every direct child of a scrolling region.
+    if properties and properties.Size and parent and parent:IsA("ScrollingFrame") then
+        local size = properties.Size
+        if size.X.Scale > 0 then
+            properties = table.clone(properties)
+            local scrollbarGutter = math.max(self.Style.ScrollbarSize, 9) + 36
+            properties.Size = UDim2.new(
+                size.X.Scale,
+                size.X.Offset - scrollbarGutter,
+                size.Y.Scale,
+                size.Y.Offset
+            )
+        end
+    end
     local localKey = self:GetID(id)
     local key = (self._scope ~= "" and self._scope .. "/" or "") .. localKey
     local object = self.Widgets[key]
@@ -163,13 +179,13 @@ function ImGui:_getWindow(name, flags)
         BackgroundTransparency = 1, BorderSizePixel = 0, Active = true,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
-        VerticalScrollBarInset = Enum.ScrollBarInset.Always,
+        VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
         ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.ScrollbarGrab,
         ScrollBarImageTransparency = 0,
     })
     make("UIPadding", content, {
         PaddingLeft = UDim.new(0, style.WindowPadding.X),
-        -- Standard padding only; _widget reduces actual GuiObject widths below.
+        -- Standard padding; _widget reserves the scrollbar gutter in child widths.
         PaddingRight = UDim.new(0, style.WindowPadding.X),
         PaddingTop = UDim.new(0, style.WindowPadding.Y),
         PaddingBottom = UDim.new(0, style.WindowPadding.Y),
