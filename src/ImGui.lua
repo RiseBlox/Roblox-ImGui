@@ -331,7 +331,7 @@ function ImGui:Text(text, config)
         RichText = config.RichText == true,
     })
     local rawText = tostring(text == nil and "" or text)
-    if config.Wrap == false or config.Align == Enum.TextXAlignment.Left or config.RichText == true then
+    if config.Wrap == false or config.Align ~= nil or config.RichText == true then
         label.TextWrapped = config.Wrap ~= false
         label.Text = rawText
     else
