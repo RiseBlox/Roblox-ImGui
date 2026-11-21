@@ -17,7 +17,8 @@ A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
 
 - Context creation and teardown: ImGui.new and Destroy
 - Frame lifecycle: NewFrame, Begin, End, Render
-- Draggable windows, vertically scrollable window content, independently scrollable child regions, and a Dear ImGui-inspired dark theme with blue accents
+- Draggable windows with click-to-focus and click-to-front behavior, vertically scrollable window content, independently scrollable child regions, and a Dear ImGui-inspired dark theme with blue accents
+- Interactive widgets participate in Tab-based keyboard/gamepad selection; selecting a widget activates its owning window
 - Compact widget rows with right-side labels, square frames, minimal rounding, active-window title styling, and visible slider grabs
 - ID stack: PushID, PopID, GetID
 - Text, buttons, checkboxes, radio buttons, progress bars, float/integer sliders, text inputs
@@ -88,7 +89,7 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 
 ## Development roadmap
 
-1. Core correctness: frame lifecycle guards, stable widget identity across windows/children, lifecycle cleanup, input connection ownership, nested scopes, and Studio/executor smoke tests.
+1. Core interaction and lifecycle: frame lifecycle guards, stable widget identity across windows/children, click-to-focus and click-to-front, title hover states, Tab selection, nested scopes, and context cleanup. Initial interaction smoke test: \`examples/Milestone01InteractionTest.client.lua\`.
 2. Widget coverage: radio buttons, combos, selectables, progress bars, color editing, trees, tabs, tables, menus, popups, modal dialogs.
 3. Layout: groups, columns, table sizing, advanced clipping, item widths, and layout rules.
 4. Interaction: keyboard navigation, focus, shortcuts, gamepad navigation, drag-and-drop.
