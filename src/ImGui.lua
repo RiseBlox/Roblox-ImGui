@@ -85,6 +85,25 @@ function ImGui:GetID(id)
 end
 
 function ImGui:_widget(id, className, parent, properties)
+    -- Add a real per-widget horizontal inset inside scrolling content. The
+    -- ScrollingFrame UIPadding is the outer window margin; this is the inner
+    -- spacing between the content edge and each submitted widget.
+    if properties and properties.Size and parent and parent:IsA("ScrollingFrame") then
+        local size = properties.Size
+        if size.X.Scale > 0 then
+            properties = table.clone(properties)
+            local margin = 8
+            local position = properties.Position or UDim2.new()
+            properties.Position = UDim2.new(
+                position.X.Scale, position.X.Offset + margin,
+                position.Y.Scale, position.Y.Offset
+            )
+            properties.Size = UDim2.new(
+                size.X.Scale, size.X.Offset - margin * 2,
+                size.Y.Scale, size.Y.Offset
+            )
+        end
+    end
     local localKey = self:GetID(id)
     local key = (self._scope ~= "" and self._scope .. "/" or "") .. localKey
     local object = self.Widgets[key]
@@ -1166,51 +1185,43 @@ function ImGui:Separator(text)
     local frame = self:_add("Separator:" .. tostring(text or self._order), "Frame", {
         Name = "Separator", Size = UDim2.new(1, 0, 0, hasText and 22 or 8), BackgroundTransparency = 1,
     })
-    -- Separators get their own balanced inset so neither line touches the
-    -- content edge. Keep a clear gap on both sides of the label.
-    local horizontalInset = 8
-    local labelGap = 8
     local lineY = hasText and 11 or 4
     if not hasText then
         local line = frame:FindFirstChild("Line") or make("Frame", frame, {
-            Name = "Line", Position = UDim2.new(0, horizontalInset, 0, lineY),
-            Size = UDim2.new(1, -(horizontalInset * 2), 0, 1),
-            BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
+            Name = "Line", Position = UDim2.new(0, 0, 0, lineY),
+            Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
         })
-        line.Position = UDim2.new(0, horizontalInset, 0, lineY)
-        line.Size = UDim2.new(1, -(horizontalInset * 2), 0, 1)
+        line.Position = UDim2.new(0, 0, 0, lineY)
+        line.Size = UDim2.new(1, 0, 0, 1)
         line.BackgroundColor3 = self.Style.Separator
         return frame
     end
 
+    -- Align the separator caption with ordinary content text. Only the line
+    -- needs to begin after the caption, with a small readable gap.
     local labelText = tostring(text)
     local measured = TextService:GetTextSize(labelText, self.Style.FontSize, self.Style.Font, Vector2.new(1000, 22))
-    local labelWidth = math.ceil(measured.X) + 4
-    local labelX = horizontalInset + labelGap
-    local leftLine = frame:FindFirstChild("LeftLine") or make("Frame", frame, {
-        Name = "LeftLine", Position = UDim2.new(0, horizontalInset, 0, lineY),
-        Size = UDim2.new(0, labelGap, 0, 1), BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
-    })
+    local labelWidth = math.ceil(measured.X) + 2
+    local labelGap = 8
     local label = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Position = UDim2.fromOffset(labelX, 0), Size = UDim2.new(0, labelWidth, 0, 22),
+        Name = "Label", Position = UDim2.fromOffset(0, 0), Size = UDim2.new(0, labelWidth, 0, 22),
         BackgroundTransparency = 1, BorderSizePixel = 0,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
         ZIndex = 2,
     })
     local rightLine = frame:FindFirstChild("RightLine") or make("Frame", frame, {
-        Name = "RightLine", Position = UDim2.new(0, labelX + labelWidth + labelGap, 0, lineY),
-        Size = UDim2.new(1, -(labelX + labelWidth + labelGap + horizontalInset), 0, 1),
+        Name = "RightLine", Position = UDim2.new(0, labelWidth + labelGap, 0, lineY),
+        Size = UDim2.new(1, -(labelWidth + labelGap), 0, 1),
         BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
     })
     label.Text = labelText
     label.BackgroundTransparency = 1
+    label.Position = UDim2.fromOffset(0, 0)
     label.Size = UDim2.new(0, labelWidth, 0, 22)
     label.ZIndex = 2
-    leftLine.Position = UDim2.new(0, horizontalInset, 0, lineY)
-    leftLine.Size = UDim2.new(0, labelGap, 0, 1)
-    rightLine.Position = UDim2.new(0, labelX + labelWidth + labelGap, 0, lineY)
-    rightLine.Size = UDim2.new(1, -(labelX + labelWidth + labelGap + horizontalInset), 0, 1)
+    rightLine.Position = UDim2.new(0, labelWidth + labelGap, 0, lineY)
+    rightLine.Size = UDim2.new(1, -(labelWidth + labelGap), 0, 1)
     return frame
 end
 
