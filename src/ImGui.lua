@@ -533,13 +533,13 @@ function ImGui:Combo(label, selected, items, callback, id)
         if child:IsA("TextButton") then child.Visible = tonumber(child.Name:match("Option_(%d+)")) ~= nil
             and tonumber(child.Name:match("Option_(%d+)")) <= #items end
     end
+    local ownerWindow = self.CurrentWindow
     local function bindComboInput(target)
         if target:GetAttribute("ImGuiComboInputBound") == true then return end
         target:SetAttribute("ImGuiComboInputBound", true)
         target.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                local owner = self.CurrentWindow
-                local allowed = owner and owner.Focus and owner.Focus(input.Position) == true
+                local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
                 target:SetAttribute("ImGuiInputAllowed", allowed == true)
             end
         end)
