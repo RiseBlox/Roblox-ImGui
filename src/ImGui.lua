@@ -4,7 +4,6 @@
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local GuiService = game:GetService("GuiService")
 local TextService = game:GetService("TextService")
 
 local ImGui = {}
@@ -71,26 +70,10 @@ function ImGui.new(config)
         ScreenGui = screen, Style = table.clone(DEFAULT_STYLE), Windows = {}, Widgets = {},
         WindowStack = {}, CurrentWindow = nil, CurrentParent = nil, _scope = "", _scopeStack = {},
         FrameNumber = 0, _idStack = {}, _order = 0, _connections = {}, _callbacks = {},
-        _frameActive = false, _destroyed = false, _focusables = {},
+        _frameActive = false, _destroyed = false,
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
 
-    -- Tab cycles through interactive widgets in the order they were submitted.
-    table.insert(self._connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed or input.KeyCode ~= Enum.KeyCode.Tab then return end
-        if UserInputService:GetFocusedTextBox() then return end
-        local focusables = self._focusables
-        if #focusables == 0 then return end
-        local selectedIndex = 0
-        for index, object in ipairs(focusables) do
-            if object == GuiService.SelectedObject then selectedIndex = index break end
-        end
-        local nextIndex = selectedIndex % #focusables + 1
-        local target = focusables[nextIndex]
-        if target and target.Parent and target.Visible then
-            GuiService.SelectedObject = target
-        end
-    end))
     return self
 end
 
@@ -115,10 +98,6 @@ function ImGui:_widget(id, className, parent, properties)
     end
     object.LayoutOrder = self._order
     object:SetAttribute("ImGuiLastSeen", self.FrameNumber)
-    if object:IsA("GuiButton") or object:IsA("TextBox") then
-        object.Selectable = true
-        table.insert(self._focusables, object)
-    end
 
     -- Any click on a widget makes its owning window active.
     local currentWindow = self.CurrentWindow
@@ -133,9 +112,6 @@ function ImGui:_widget(id, className, parent, properties)
                 activateOwner()
             end
         end))
-        if object:IsA("GuiObject") then
-            table.insert(self._connections, object.SelectionGained:Connect(activateOwner))
-        end
     end
     return object
 end
@@ -152,7 +128,6 @@ function ImGui:NewFrame()
     assert(not self._frameActive, "NewFrame() called before the previous frame was rendered")
     self.FrameNumber += 1
     self._order = 0
-    table.clear(self._focusables)
     self.WindowStack = {}
     self._scopeStack = {}
     self._scope = ""
