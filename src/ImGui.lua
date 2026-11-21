@@ -397,8 +397,9 @@ function ImGui:ProgressBar(fraction, size, overlay, id)
         controller = { Frame = bar }
         function controller:SetFraction(nextFraction, nextOverlay)
             local fractionValue = math.clamp(tonumber(nextFraction) or 0, 0, 1)
-            local fillObject = bar:FindFirstChild("Fill")
-            local labelObject = bar:FindFirstChild("Overlay")
+            local currentBar = self.Frame
+            local fillObject = currentBar and currentBar:FindFirstChild("Fill")
+            local labelObject = currentBar and currentBar:FindFirstChild("Overlay")
             if fillObject then fillObject.Size = UDim2.new(fractionValue, 0, 1, 0) end
             if labelObject and nextOverlay ~= nil then labelObject.Text = tostring(nextOverlay) end
             self.Fraction = fractionValue
@@ -663,6 +664,7 @@ function ImGui:Destroy()
     table.clear(self.WindowStack)
     table.clear(self._scopeStack)
     table.clear(self._callbacks or {})
+    table.clear(self._progressBars or {})
 end
 
 return ImGui
