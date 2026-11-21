@@ -17,7 +17,7 @@ A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
 
 - Context creation and teardown: ImGui.new and Destroy
 - Frame lifecycle: NewFrame, Begin, End, Render
-- Draggable windows, vertically scrollable window content, and independently scrollable child regions
+- Draggable windows, vertically scrollable window content, independently scrollable child regions, and a classic Dear ImGui-inspired dark-blue theme
 - ID stack: PushID, PopID, GetID
 - Text, buttons, checkboxes, radio buttons, progress bars, float/integer sliders, text inputs
 - Separators, spacing, basic style palette, built-in demo
