@@ -263,6 +263,73 @@ function ImGui:Checkbox(label, value, callback, id)
     return value == true
 end
 
+-- Matches Dear ImGui's RadioButton(label, active) interaction model.
+-- Roblox's retained input events are exposed through a callback.
+function ImGui:RadioButton(label, active, callback, id)
+    local key = id or ("RadioButton:" .. tostring(label))
+    local button = self:_add(key, "TextButton", {
+        Name = "RadioButton", Size = UDim2.new(1, 0, 0, 26),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+        AutoButtonColor = false, Font = self.Style.Font,
+        TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    local circle = button:FindFirstChild("Circle") or make("Frame", button, {
+        Name = "Circle", Position = UDim2.fromOffset(1, 4),
+        Size = UDim2.fromOffset(17, 17), BackgroundColor3 = self.Style.FrameBg,
+        BorderSizePixel = 0,
+    })
+    if not circle:FindFirstChildOfClass("UICorner") then
+        make("UICorner", circle, { CornerRadius = UDim.new(1, 0) })
+        make("UIStroke", circle, { Color = self.Style.Border, Thickness = 1 })
+    end
+    local dot = circle:FindFirstChild("Dot") or make("Frame", circle, {
+        Name = "Dot", AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(9, 9),
+        BackgroundColor3 = self.Style.CheckMark, BorderSizePixel = 0,
+    })
+    if not dot:FindFirstChildOfClass("UICorner") then
+        make("UICorner", dot, { CornerRadius = UDim.new(1, 0) })
+    end
+    dot.Visible = active == true
+    button.Text = "     " .. tostring(label)
+    self._callbacks = self._callbacks or {}
+    self._callbacks[key] = callback
+    if button:GetAttribute("ImGuiClickConnected") ~= true then
+        button:SetAttribute("ImGuiClickConnected", true)
+        button.Activated:Connect(function()
+            local fn = self._callbacks[key]
+            if fn then fn() end
+        end)
+    end
+    return active == true
+end
+
+-- Dear ImGui-style normalized progress value with an optional overlay label.
+function ImGui:ProgressBar(fraction, size, overlay, id)
+    local key = id or ("ProgressBar:" .. tostring(overlay or ""))
+    local bar = self:_add(key, "Frame", {
+        Name = "ProgressBar", Size = size or UDim2.new(1, 0, 0, 18),
+        BackgroundColor3 = self.Style.FrameBg, BorderSizePixel = 0,
+        ClipsDescendants = true,
+    })
+    if not bar:FindFirstChildOfClass("UICorner") then round(bar, self.Style.FrameRounding) end
+    local fill = bar:FindFirstChild("Fill") or make("Frame", bar, {
+        Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
+    })
+    fill.Size = UDim2.new(math.clamp(tonumber(fraction) or 0, 0, 1), 0, 1, 0)
+    if not fill:FindFirstChildOfClass("UICorner") then round(fill, self.Style.FrameRounding) end
+    local label = bar:FindFirstChild("Overlay") or make("TextLabel", bar, {
+        Name = "Overlay", Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+        Font = self.Style.Font, TextSize = self.Style.FontSize,
+        TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+    })
+    label.Text = tostring(overlay or "")
+    return bar
+end
+
 function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     minValue, maxValue = minValue or 0, maxValue or 1
     assert(maxValue > minValue, "SliderFloat maxValue must be greater than minValue")
