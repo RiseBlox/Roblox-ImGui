@@ -288,7 +288,7 @@ function ImGui:Text(text, config)
         Name = "Text", BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y,
         Size = UDim2.new(1, 0, 0, 18), Font = config.Font or self.Style.Font,
         TextSize = config.TextSize or self.Style.FontSize, TextColor3 = config.Color or self.Style.Text,
-        TextXAlignment = config.Align or Enum.TextXAlignment.Left,
+        TextXAlignment = config.Align or Enum.TextXAlignment.Justify,
         TextWrapped = config.Wrap ~= false, RichText = config.RichText == true,
     })
     label.Text = tostring(text == nil and "" or text)
@@ -788,9 +788,12 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     if track:GetAttribute("ImGuiSliderConnected") ~= true then
         track:SetAttribute("ImGuiSliderConnected", true)
         local dragging = false
+        local ownerWindow = self.CurrentWindow
         track.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                if track:GetAttribute("ImGuiInputAllowed") ~= true then return end
+                local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
+                track:SetAttribute("ImGuiInputAllowed", allowed == true)
+                if not allowed then return end
                 dragging = true
                 update(input)
             end
@@ -858,7 +861,12 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
         end
     end
     valueLabel.Text = formatDragValue(value)
-    updateDragFill(value)
+    if drag:GetAttribute("ImGuiDragFillInitialized") ~= true then
+        updateDragFill(value)
+        drag:SetAttribute("ImGuiDragFillInitialized", true)
+    elseif drag:GetAttribute("ImGuiIsDragging") ~= true then
+        updateDragFill(value)
+    end
     drag:SetAttribute("ImGuiDragValue", value)
     drag:SetAttribute("ImGuiDragSpeed", speed)
     drag:SetAttribute("ImGuiDragMin", minValue)
@@ -877,7 +885,8 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
             if high ~= nil then nextValue = math.min(nextValue, high) end
             drag:SetAttribute("ImGuiDragValue", nextValue)
             valueLabel.Text = formatDragValue(nextValue)
-            updateDragFill(nextValue)
+            local pointerAlpha = math.clamp((UserInputService:GetMouseLocation().X - drag.AbsolutePosition.X) / math.max(drag.AbsoluteSize.X, 1), 0, 1)
+            dragFill.Size = UDim2.new(pointerAlpha, 0, 1, 0)
             local fn = self._callbacks and self._callbacks[key]
             if fn then fn(nextValue) end
         end
@@ -885,11 +894,17 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
             if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
             local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
             drag:SetAttribute("ImGuiInputAllowed", allowed == true)
-            if allowed then dragging, lastX = true, input.Position.X end
+            if allowed then
+                dragging, lastX = true, input.Position.X
+                drag:SetAttribute("ImGuiIsDragging", true)
+                local pointerAlpha = math.clamp((input.Position.X - drag.AbsolutePosition.X) / math.max(drag.AbsoluteSize.X, 1), 0, 1)
+                dragFill.Size = UDim2.new(pointerAlpha, 0, 1, 0)
+            end
         end)
         drag.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging, lastX = false, nil
+                drag:SetAttribute("ImGuiIsDragging", false)
             end
         end)
         table.insert(self._connections, UserInputService.InputChanged:Connect(function(input)
