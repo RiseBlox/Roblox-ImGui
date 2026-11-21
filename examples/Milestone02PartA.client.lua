@@ -57,7 +57,9 @@ local function draw()
 
         ui:Separator("Bullet text")
         ui:BulletText("First bullet item")
-        ui:BulletText("Second bullet item with a longer description")
+        ui:BulletText("Second bullet item", 2)
+        ui:BulletText("Third bullet item", 3)
+        ui:BulletText("Back to the first level", 1)
 
         ui:Separator("Image")
         ui:Text("Replace rbxassetid://0 with a valid image asset to see it.")
