@@ -811,6 +811,153 @@ function ImGui:SliderInt(label, value, minValue, maxValue, callback, id)
     end, id)
 end
 
+
+-- Numeric drag controls. Horizontal pointer movement changes the value by speed per pixel.
+function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id)
+    speed = tonumber(speed) or 0.01
+    minValue, maxValue = tonumber(minValue), tonumber(maxValue)
+    assert(speed > 0, "DragFloat speed must be greater than zero")
+    assert(not (minValue and maxValue) or maxValue > minValue, "DragFloat maxValue must be greater than minValue")
+    value = tonumber(value) or 0
+    if minValue then value = math.max(value, minValue) end
+    if maxValue then value = math.min(value, maxValue) end
+    local key = id or ("DragFloat:" .. tostring(label))
+    local frame = self:_add(key, "Frame", {Name = "DragFloat", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1})
+    local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
+        Name = "Label", Size = UDim2.new(0.36, 0, 1, 0), BackgroundTransparency = 1,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
+    })
+    title.Text = tostring(label)
+    local drag = frame:FindFirstChild("Drag") or make("TextButton", frame, {
+        Name = "Drag", Position = UDim2.new(0.38, 0, 0, 1), Size = UDim2.new(0.62, 0, 0, 24),
+        BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
+        BorderSizePixel = 0, AutoButtonColor = false, Text = "", Font = self.Style.Font,
+        TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+    })
+    if not drag:FindFirstChildOfClass("UICorner") then round(drag, self.Style.FrameRounding) end
+    local valueLabel = drag:FindFirstChild("Value") or make("TextLabel", drag, {
+        Name = "Value", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
+    })
+    valueLabel.Text = string.format("%.3f", value)
+    drag:SetAttribute("ImGuiDragValue", value)
+    drag:SetAttribute("ImGuiDragSpeed", speed)
+    drag:SetAttribute("ImGuiDragMin", minValue)
+    drag:SetAttribute("ImGuiDragMax", maxValue)
+    self._callbacks = self._callbacks or {}
+    self._callbacks[key] = callback
+    if drag:GetAttribute("ImGuiDragConnected") ~= true then
+        drag:SetAttribute("ImGuiDragConnected", true)
+        local ownerWindow = self.CurrentWindow
+        local dragging, lastX = false, nil
+        local function applyDelta(deltaX)
+            local current = tonumber(drag:GetAttribute("ImGuiDragValue")) or 0
+            local nextValue = current + deltaX * (tonumber(drag:GetAttribute("ImGuiDragSpeed")) or 0.01)
+            local low, high = drag:GetAttribute("ImGuiDragMin"), drag:GetAttribute("ImGuiDragMax")
+            if low ~= nil then nextValue = math.max(nextValue, low) end
+            if high ~= nil then nextValue = math.min(nextValue, high) end
+            drag:SetAttribute("ImGuiDragValue", nextValue)
+            valueLabel.Text = string.format("%.3f", nextValue)
+            local fn = self._callbacks and self._callbacks[key]
+            if fn then fn(nextValue) end
+        end
+        drag.InputBegan:Connect(function(input)
+            if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+            local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
+            drag:SetAttribute("ImGuiInputAllowed", allowed == true)
+            if allowed then dragging, lastX = true, input.Position.X end
+        end)
+        drag.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging, lastX = false, nil
+            end
+        end)
+        table.insert(self._connections, UserInputService.InputChanged:Connect(function(input)
+            if not dragging or lastX == nil then return end
+            if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+            local nextX = input.Position.X
+            applyDelta(nextX - lastX)
+            lastX = nextX
+        end))
+        drag.MouseEnter:Connect(function() drag.BackgroundColor3 = self.Style.FrameBgHovered end)
+        drag.MouseLeave:Connect(function() drag.BackgroundColor3 = self.Style.FrameBg end)
+    end
+    return value
+end
+
+function ImGui:DragInt(label, value, speed, minValue, maxValue, callback, id)
+    return self:DragFloat(label, value, speed or 1, minValue, maxValue, function(nextValue)
+        if callback then callback(math.floor(nextValue + 0.5)) end
+    end, id)
+end
+
+local function numericInput(self, label, value, callback, config, integer)
+    config = config or {}
+    local key = config.ID or ((integer and "InputInt:" or "InputFloat:") .. tostring(label))
+    local minValue, maxValue = tonumber(config.Min), tonumber(config.Max)
+    assert(not (minValue and maxValue) or maxValue >= minValue, "Numeric input Min must not exceed Max")
+    local function normalize(candidate)
+        candidate = tonumber(candidate)
+        if not candidate or candidate ~= candidate or candidate == math.huge or candidate == -math.huge then return nil end
+        if integer then candidate = math.floor(candidate + 0.5) end
+        if minValue then candidate = math.max(candidate, minValue) end
+        if maxValue then candidate = math.min(candidate, maxValue) end
+        return candidate
+    end
+    value = normalize(value) or 0
+    local frame = self:_add(key, "Frame", {Name = integer and "InputInt" or "InputFloat", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1})
+    local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
+        Name = "Label", Position = UDim2.new(0.70, 0, 0, 0), Size = UDim2.new(0.30, 0, 0, 24),
+        BackgroundTransparency = 1, Font = self.Style.Font, TextSize = self.Style.FontSize,
+        TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+    })
+    title.Text = tostring(label)
+    local input = frame:FindFirstChild("Input") or make("TextBox", frame, {
+        Name = "Input", Position = UDim2.fromOffset(0, 1), Size = UDim2.new(0.64, 0, 0, 23),
+        BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
+        BorderSizePixel = 0, ClearTextOnFocus = false, Font = self.Style.Font,
+        TextSize = self.Style.FontSize, TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    if not input:FindFirstChildOfClass("UICorner") then round(input, self.Style.FrameRounding) end
+    input.PlaceholderText = config.Placeholder or (integer and "0" or "0.000")
+    input:SetAttribute("ImGuiNumericValue", value)
+    local decimals = math.clamp(math.floor(tonumber(config.Decimals) or 3), 0, 8)
+    if not input:IsFocused() then
+        input.Text = integer and tostring(value) or string.format("%." .. tostring(decimals) .. "f", value)
+    end
+    self._callbacks = self._callbacks or {}
+    self._callbacks[key] = callback
+    if input:GetAttribute("ImGuiNumericConnected") ~= true then
+        input:SetAttribute("ImGuiNumericConnected", true)
+        input.Focused:Connect(function() input.BackgroundColor3 = self.Style.FrameBgActive end)
+        input.FocusLost:Connect(function()
+            input.BackgroundColor3 = self.Style.FrameBg
+            local nextValue = normalize(input.Text)
+            if nextValue == nil then
+                local previous = tonumber(input:GetAttribute("ImGuiNumericValue")) or 0
+                input.Text = integer and tostring(previous) or string.format("%." .. tostring(decimals) .. "f", previous)
+                return
+            end
+            input:SetAttribute("ImGuiNumericValue", nextValue)
+            input.Text = integer and tostring(nextValue) or string.format("%." .. tostring(decimals) .. "f", nextValue)
+            local fn = self._callbacks and self._callbacks[key]
+            if fn then fn(nextValue) end
+        end)
+    end
+    return value
+end
+
+function ImGui:InputFloat(label, value, callback, config)
+    return numericInput(self, label, value, callback, config, false)
+end
+
+function ImGui:InputInt(label, value, callback, config)
+    return numericInput(self, label, value, callback, config, true)
+end
+
 function ImGui:InputText(label, value, callback, config)
     config = config or {}
     local key = config.ID or ("Input:" .. tostring(label))
