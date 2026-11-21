@@ -61,6 +61,10 @@ end)
 -- Call ui:Destroy() when the UI is no longer needed.
 ```
 
+## Visual parity smoke test
+
+Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lua) as a client LocalScript after placing the module in `ReplicatedStorage`. It exercises two draggable windows, buttons, checkboxes, radio buttons, sliders, text input, progress bars, child scrolling, and window scrolling. Set initial window positions only once; reapplying a fixed position every frame prevents dragging.
+
 ## API snapshot
 
 | Method | Purpose |
