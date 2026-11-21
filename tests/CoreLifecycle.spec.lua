@@ -48,6 +48,20 @@ return function()
             expect(count).to.equal(3)
         end)
 
+
+        it("creates radio buttons and progress bars", function()
+            ui:NewFrame()
+            ui:Begin("Widgets")
+            local selected = ui:RadioButton("Option A", true, function() end, "option-a")
+            local bar = ui:ProgressBar(0.65, nil, "65%", "loading")
+            ui:End()
+            ui:Render()
+            expect(selected).to.equal(true)
+            expect(ui.Widgets["Window:Widgets/option-a"]).never.to.equal(nil)
+            expect(bar:FindFirstChild("Fill").Size.X.Scale).to.equal(0.65)
+            expect(bar:FindFirstChild("Overlay").Text).to.equal("65%")
+        end)
+
         it("destroys its GUI and rejects further frames", function()
             local screen = ui.ScreenGui
             ui:Destroy()
