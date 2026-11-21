@@ -1,12 +1,12 @@
 # Roblox-ImGui
 
-A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
+A Roblox-native GUI library inspired by Dear ImGui, with an immediate-mode-style submission API and retained Roblox GUI instances.
 
 **Status:** early foundation, version 0.1.0. This is an independent Luau implementation. It is not a C++ port, does not embed Dear ImGui source, and is not an official Dear ImGui project.
 
 ## Goals
 
-- Bring Dear ImGui's immediate-mode workflow and visual language to Roblox.
+- Bring Dear ImGui's API conventions, interaction model, layout rules, and visual language to Roblox.
 - Use native Roblox GUI instances and client-side Luau.
 - Support both Roblox Studio LocalScripts and client executor environments through the same shared core; avoid hard dependencies on executor-only APIs.
 - Track the current Dear ImGui feature set while respecting Roblox platform constraints.
@@ -23,9 +23,9 @@ A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
 - ID stack: PushID, PopID, GetID
 - Text, buttons, checkboxes, radio buttons, progress bars, float/integer sliders, text inputs
 - Separators, spacing, a configurable ImGui-style palette/layout, built-in demo
-- Retained Roblox instances keyed by widget ID
+- Retained Roblox instances keyed by widget ID; widgets are resubmitted each frame and their GUI instances are reused
 
-This is an initial foundation, not feature parity. The core lifecycle is being hardened before the larger widget set is added.
+This is an initial foundation, not feature parity. The API follows an immediate-mode-style frame submission pattern, while rendering currently uses retained Roblox GUI instances.
 
 ## Runtime compatibility
 
