@@ -20,7 +20,7 @@ A Roblox-native GUI library inspired by Dear ImGui, with an immediate-mode-style
 - Draggable windows with click-to-focus and click-to-front behavior, vertically scrollable window content, independently scrollable child regions, and a Dear ImGui-inspired dark theme with blue accents
 - Compact widget rows with right-side labels, square frames, minimal rounding, active-window title styling, and visible slider grabs
 - ID stack: PushID, PopID, GetID
-- Text, buttons, checkboxes, radio buttons, progress bars, float/integer sliders, text inputs
+- Text, buttons, checkboxes, radio buttons, selectables, combo boxes, collapsing headers, tree nodes, bullet text, images, progress bars, float/integer sliders, text inputs
 - Separators, spacing, a configurable ImGui-style palette/layout, built-in demo
 - Retained Roblox instances keyed by widget ID; widgets are resubmitted each frame and their GUI instances are reused
 
@@ -77,6 +77,12 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 | Style fields | WindowPadding, FramePadding, ItemSpacing, ItemInnerSpacing, WindowRounding, ChildRounding, FrameRounding, BorderSize, FrameBorderSize, ScrollbarSize, GrabMinSize, TitleBarHeight, colors, and font settings |
 | Button(label, config?) | Render a button |
 | Checkbox(label, value, callback, id?) | Render a checkbox |
+| Selectable(label, selected, callback?, id?) | Render a selectable row; callback receives the next selected state |
+| Combo(label, selected, items, callback?, id?) | Render a dropdown; selected is a 1-based index or item string; callback receives index and item |
+| CollapsingHeader(label, id?) | Toggle a section; conditionally submit its contents when true |
+| TreeNode(label, id?) / TreePop() | Toggle a tree node; conditionally submit its contents when true |
+| BulletText(text) | Render a bullet-prefixed text row |
+| Image(image, size?, config?) | Render a Roblox image asset/content ID |
 | RadioButton(label, active, callback?, id?) | Render a radio button; callback runs when clicked |
 | ProgressBar(fraction, size?, overlay?, id?) | Render a normalized progress bar |
 | SliderFloat / SliderInt | Render numeric sliders |
@@ -88,8 +94,8 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 
 ## Development roadmap
 
-1. Core interaction and lifecycle: frame lifecycle guards, stable widget identity across windows/children, click-to-focus and click-to-front, title hover states, Tab selection, nested scopes, and context cleanup. Initial interaction smoke test: \`examples/Milestone01InteractionTest.client.lua\`.
-2. Widget coverage: radio buttons, combos, selectables, progress bars, color editing, trees, tabs, tables, menus, popups, modal dialogs.
+1. Core interaction and lifecycle: frame lifecycle guards, stable widget identity across windows/children, click-to-focus and click-to-front, title hover states, nested scopes, and context cleanup. Initial interaction smoke test: \`examples/Milestone01InteractionTest.client.lua\`.
+2. Widget coverage: core controls and Part A widgets (selectables, combos, collapsing headers, tree nodes, bullet text, images); remaining numeric inputs, drag controls, color editing, tabs, tables, menus, popups, and modal dialogs.
 3. Layout: groups, columns, table sizing, advanced clipping, item widths, and layout rules.
 4. Interaction: keyboard navigation, focus, shortcuts, gamepad navigation, drag-and-drop.
 5. Drawing: draw lists, primitives, clipping, gradients, images and custom callbacks.
