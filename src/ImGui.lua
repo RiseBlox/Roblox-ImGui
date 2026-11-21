@@ -85,22 +85,6 @@ function ImGui:GetID(id)
 end
 
 function ImGui:_widget(id, className, parent, properties)
-    -- Roblox scrollbars overlay the ScrollingFrame's child canvas. UIPadding
-    -- alone does not constrain Scale-sized children, so reserve a real,
-    -- fixed-width right gutter on every direct child of a scrolling region.
-    if properties and properties.Size and parent and parent:IsA("ScrollingFrame") then
-        local size = properties.Size
-        if size.X.Scale > 0 then
-            properties = table.clone(properties)
-            local scrollbarGutter = math.max(self.Style.ScrollbarSize, 9) + 36
-            properties.Size = UDim2.new(
-                size.X.Scale,
-                size.X.Offset - scrollbarGutter,
-                size.Y.Scale,
-                size.Y.Offset
-            )
-        end
-    end
     local localKey = self:GetID(id)
     local key = (self._scope ~= "" and self._scope .. "/" or "") .. localKey
     local object = self.Widgets[key]
@@ -379,6 +363,18 @@ function ImGui:Text(text, config)
         RichText = config.RichText == true,
     })
     local rawText = tostring(text == nil and "" or text)
+    -- Put the safety margin inside the TextLabel itself. Unlike changing a
+    -- ScrollingFrame's canvas or child Size, UIPadding constrains the label's
+    -- text-rendering rectangle, so glyphs cannot paint beneath the scrollbar.
+    local textPadding = label:FindFirstChild("ImGuiTextSafetyPadding")
+    if not textPadding then
+        textPadding = make("UIPadding", label, {
+            Name = "ImGuiTextSafetyPadding",
+            PaddingRight = UDim.new(0, 56),
+        })
+    else
+        textPadding.PaddingRight = UDim.new(0, 56)
+    end
     if config.Wrap == false or config.Align ~= nil or config.RichText == true then
         label.TextWrapped = config.Wrap ~= false
         label.Text = rawText
@@ -389,13 +385,9 @@ function ImGui:Text(text, config)
             -- The owning window/child ScrollingFrame reserves scrollbar space
             -- through its right UIPadding, so the label's own width is the true
             -- usable text width. Do not subtract the scrollbar twice here.
-            -- Keep a second, text-specific safety gutter. TextService's measured
-            -- widths can differ slightly from rendered TextLabel glyph advances,
-            -- especially with distributed em-space justification. This protects
-            -- the final words from the overlaid scrollbar even if the parent
-            -- ScrollingFrame's inset varies between windows.
-            local rightSafetyGutter = math.max(self.Style.ScrollbarSize, 9) + 24
-            local width = math.max(label.AbsoluteSize.X - rightSafetyGutter, 1)
+            -- Match the inner UIPadding above: justify only within the
+            -- TextLabel's actual safe rendering rectangle.
+            local width = math.max(label.AbsoluteSize.X - 56, 1)
             label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
         end
         refreshJustification()
