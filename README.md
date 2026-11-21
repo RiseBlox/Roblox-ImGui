@@ -19,7 +19,7 @@ A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
 - Frame lifecycle: NewFrame, Begin, End, Render
 - Draggable windows, vertically scrollable window content, and independently scrollable child regions
 - ID stack: PushID, PopID, GetID
-- Text, buttons, checkboxes, float/integer sliders, text inputs
+- Text, buttons, checkboxes, radio buttons, progress bars, float/integer sliders, text inputs
 - Separators, spacing, basic style palette, built-in demo
 - Retained Roblox instances keyed by widget ID
 
@@ -70,7 +70,7 @@ end)
 | BeginChild(id, size) / EndChild() | Begin/end a child region |
 | Text(text, config?) | Render text |
 | Button(label, config?) | Render a button |
-| Checkbox(label, value, callback, id?) | Render a checkbox |
+| Checkbox(label, value, callback, id?) | Render a checkbox |\n| RadioButton(label, active, callback?, id?) | Render a radio button; callback runs when clicked |\n| ProgressBar(fraction, size?, overlay?, id?) | Render a normalized progress bar |
 | SliderFloat / SliderInt | Render numeric sliders |
 | InputText(label, value, callback, config?) | Render a text input |
 | Separator(text?) / Spacing() | Layout helpers |
