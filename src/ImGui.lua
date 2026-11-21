@@ -496,7 +496,7 @@ function ImGui:Combo(label, selected, items, callback, id)
         BorderColor3 = self.Style.Border, Visible = false, ZIndex = 20,
     })
     popup.Size = UDim2.new(0.62, 0, 0, math.min(#items, 6) * 22)
-    local layout = popup:FindFirstChildOfClass("UIListLayout") or vertical(popup, 0)
+    local layout = popup:FindFirstChildOfClass("UIListLayout") or make("UIListLayout", popup, { FillDirection = Enum.FillDirection.Vertical, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 0) })
     layout.Padding = UDim.new(0, 0)
     for index, item in ipairs(items) do
         local option = popup:FindFirstChild("Option_" .. index) or make("TextButton", popup, {
@@ -507,6 +507,7 @@ function ImGui:Combo(label, selected, items, callback, id)
             ZIndex = 21,
         })
         option.LayoutOrder = index
+        option:SetAttribute("ImGuiOptionIndex", index)
         option.Text = "  " .. tostring(item)
         option.Visible = true
         option.BackgroundColor3 = index == selectedIndex and self.Style.HeaderActive or self.Style.PopupBg
@@ -518,11 +519,12 @@ function ImGui:Combo(label, selected, items, callback, id)
             end)
             option.Activated:Connect(function()
                 if option:GetAttribute("ImGuiInputAllowed") ~= true then return end
-                frame:SetAttribute("ImGuiComboIndex", index)
-                choice.Text = "  " .. tostring(items[index] or "")
+                local selected = option:GetAttribute("ImGuiOptionIndex")
+                frame:SetAttribute("ImGuiComboIndex", selected)
+                choice.Text = "  " .. tostring(items[selected] or "")
                 popup.Visible = false
                 local fn = self._callbacks and self._callbacks[key]
-                if fn then fn(index, items[index]) end
+                if fn then fn(selected, items[selected]) end
             end)
         end
         option:SetAttribute("ImGuiChosen", index == selectedIndex)
@@ -531,6 +533,19 @@ function ImGui:Combo(label, selected, items, callback, id)
         if child:IsA("TextButton") then child.Visible = tonumber(child.Name:match("Option_(%d+)")) ~= nil
             and tonumber(child.Name:match("Option_(%d+)")) <= #items end
     end
+    local function bindComboInput(target)
+        if target:GetAttribute("ImGuiComboInputBound") == true then return end
+        target:SetAttribute("ImGuiComboInputBound", true)
+        target.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local owner = self.CurrentWindow
+                local allowed = owner and owner.Focus and owner.Focus(input.Position) == true
+                target:SetAttribute("ImGuiInputAllowed", allowed == true)
+            end
+        end)
+    end
+    bindComboInput(choice)
+    for _, option in ipairs(popup:GetChildren()) do if option:IsA("TextButton") then bindComboInput(option) end end
     if choice:GetAttribute("ImGuiComboConnected") ~= true then
         choice:SetAttribute("ImGuiComboConnected", true)
         choice.Activated:Connect(function()
@@ -605,16 +620,18 @@ function ImGui:BulletText(text)
     local frame = self:_add("BulletText:" .. tostring(text) .. ":" .. self._order, "Frame", {
         Name = "BulletText", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1,
     })
-    make("TextLabel", frame, {
+    local bullet = frame:FindFirstChild("Bullet") or make("TextLabel", frame, {
         Name = "Bullet", Size = UDim2.fromOffset(12, 18), BackgroundTransparency = 1,
         Text = "•", TextColor3 = self.Style.Text, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextXAlignment = Enum.TextXAlignment.Left,
     })
-    make("TextLabel", frame, {
+    local textLabel = frame:FindFirstChild("Text") or make("TextLabel", frame, {
         Name = "Text", Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -12, 1, 0),
         BackgroundTransparency = 1, Text = tostring(text), TextColor3 = self.Style.Text,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextXAlignment = Enum.TextXAlignment.Left,
     })
+    bullet.Text = "•"
+    textLabel.Text = tostring(text)
     return frame
 end
 
