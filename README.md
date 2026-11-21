@@ -17,7 +17,7 @@ A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
 
 - Context creation and teardown: ImGui.new and Destroy
 - Frame lifecycle: NewFrame, Begin, End, Render
-- Draggable windows and child regions
+- Draggable windows, vertically scrollable window content, and independently scrollable child regions
 - ID stack: PushID, PopID, GetID
 - Text, buttons, checkboxes, float/integer sliders, text inputs
 - Separators, spacing, basic style palette, built-in demo
@@ -82,7 +82,7 @@ end)
 
 1. Core correctness: frame lifecycle guards, stable widget identity across windows/children, lifecycle cleanup, input connection ownership, nested scopes, and Studio/executor smoke tests.
 2. Widget coverage: radio buttons, combos, selectables, progress bars, color editing, trees, tabs, tables, menus, popups, modal dialogs.
-3. Layout: groups, columns, table sizing, clipping, scrolling and layout rules.
+3. Layout: groups, columns, table sizing, advanced clipping and layout rules.
 4. Interaction: keyboard navigation, focus, shortcuts, gamepad navigation, drag-and-drop.
 5. Drawing: draw lists, primitives, clipping, gradients, images and custom callbacks.
 6. Window systems: resizing, collapsing, docking and multi-window management where Roblox permits.
