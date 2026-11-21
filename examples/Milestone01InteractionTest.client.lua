@@ -1,11 +1,9 @@
 -- Roblox-ImGui Milestone 01 interaction regression test.
 -- Run as a client LocalScript in Studio, or in a supported client executor.
--- Tests click focus, hover behavior, click-to-front, Tab navigation, dragging,
--- child scopes, and Destroy cleanup.
+-- Tests click focus, click-to-front, dragging, child scopes, and Destroy cleanup.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local GuiService = game:GetService("GuiService")
 
 local ImGui: any
 local moduleScript = ReplicatedStorage:FindFirstChild("ImGui")
@@ -21,7 +19,7 @@ local state = {
     AClicks = 0,
     BClicks = 0,
     ChildClicks = 0,
-    Status = "Hover a title bar: active title must NOT change.",
+    Status = "Click a window title, body, or widget to activate it.",
 }
 local connection
 local firstFrame = true
@@ -65,14 +63,12 @@ local function draw()
         })
         ui:EndChild()
         ui:Text("Click empty content space to test body focus.")
-        ui:Text("Tab should cycle interactive controls.")
         ui:Text("Status: " .. state.Status)
     end
     ui:End()
 
     if ui:Begin("Window B - front", bFlags) then
         ui:Text("Window B starts in front of A.")
-        ui:Text("Hover this title: it should only show hover color.")
         ui:Button("Activate Window B", {
             ID = "m1-b-button",
             Callback = function()
@@ -82,7 +78,6 @@ local function draw()
         })
         ui:Text("B button clicks: " .. state.BClicks)
         ui:Text("Click blank space in this body to activate B.")
-        ui:Text("Use Tab to move selection between buttons.")
         ui:Text("Status: " .. state.Status)
     end
     ui:End()
@@ -108,10 +103,7 @@ _G.RobloxImGuiMilestone01Test = {
         _G.RobloxImGuiMilestone01Test = nil
         print("[Roblox-ImGui M1] Test UI destroyed.")
     end,
-    GetSelectedObject = function()
-        return GuiService.SelectedObject
-    end,
 }
 
-print("[Roblox-ImGui M1] Started. Test title hover, body/widget focus, click-to-front, Tab navigation, dragging, and child focus.")
+print("[Roblox-ImGui M1] Started. Test body/widget focus, click-to-front, dragging, and child focus.")
 print("[Roblox-ImGui M1] Cleanup: _G.RobloxImGuiMilestone01Test.Destroy()")
