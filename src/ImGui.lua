@@ -367,10 +367,10 @@ function ImGui:Text(text, config)
     if not textPadding then
         textPadding = make("UIPadding", label, {
             Name = "ImGuiTextSafetyPadding",
-            PaddingRight = UDim.new(0, 24),
+            PaddingRight = UDim.new(0, 10),
         })
     else
-        textPadding.PaddingRight = UDim.new(0, 24)
+        textPadding.PaddingRight = UDim.new(0, 10)
     end
     if config.Wrap == false or config.Align ~= nil or config.RichText == true then
         label.TextWrapped = config.Wrap ~= false
@@ -384,7 +384,7 @@ function ImGui:Text(text, config)
             -- usable text width. Do not subtract the scrollbar twice here.
             -- Match the inner UIPadding above: justify only within the
             -- TextLabel's actual safe rendering rectangle.
-            local width = math.max(label.AbsoluteSize.X - 24, 1)
+            local width = math.max(label.AbsoluteSize.X - 10, 1)
             label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
         end
         refreshJustification()
@@ -980,14 +980,26 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
         local dragging, lastX = false, nil
         local function applyDelta(deltaX)
             local current = tonumber(drag:GetAttribute("ImGuiDragValue")) or 0
-            local nextValue = current + deltaX * (tonumber(drag:GetAttribute("ImGuiDragSpeed")) or 0.01)
             local low, high = drag:GetAttribute("ImGuiDragMin"), drag:GetAttribute("ImGuiDragMax")
+            local width = math.max(drag.AbsoluteSize.X, 1)
+            local configuredSpeed = tonumber(drag:GetAttribute("ImGuiDragSpeed")) or 0.01
+            -- When bounded, map the complete numeric range across the actual
+            -- drag surface. This prevents the value reaching its limit while
+            -- the pointer/fill is still short of the end of the bar.
+            local effectiveSpeed = configuredSpeed
+            if low ~= nil and high ~= nil then
+                effectiveSpeed = (high - low) / width
+            end
+            local nextValue = current + deltaX * effectiveSpeed
             if low ~= nil then nextValue = math.max(nextValue, low) end
             if high ~= nil then nextValue = math.min(nextValue, high) end
             drag:SetAttribute("ImGuiDragValue", nextValue)
             valueLabel.Text = formatDragValue(nextValue)
-            local pointerAlpha = math.clamp((UserInputService:GetMouseLocation().X - drag.AbsolutePosition.X) / math.max(drag.AbsoluteSize.X, 1), 0, 1)
-            dragFill.Size = UDim2.new(pointerAlpha, 0, 1, 0)
+            local fillAlpha = 0
+            if low ~= nil and high ~= nil and high > low then
+                fillAlpha = math.clamp((nextValue - low) / (high - low), 0, 1)
+            end
+            dragFill.Size = UDim2.new(fillAlpha, 0, 1, 0)
             local fn = self._callbacks and self._callbacks[key]
             if fn then fn(nextValue) end
         end
@@ -998,8 +1010,11 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
             if allowed then
                 dragging, lastX = true, input.Position.X
                 drag:SetAttribute("ImGuiIsDragging", true)
-                local pointerAlpha = math.clamp((input.Position.X - drag.AbsolutePosition.X) / math.max(drag.AbsoluteSize.X, 1), 0, 1)
-                dragFill.Size = UDim2.new(pointerAlpha, 0, 1, 0)
+                local fillAlpha = 0
+                if minValue ~= nil and maxValue ~= nil and maxValue > minValue then
+                    fillAlpha = math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
+                end
+                dragFill.Size = UDim2.new(fillAlpha, 0, 1, 0)
             end
         end)
         drag.InputEnded:Connect(function(input)
