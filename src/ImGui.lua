@@ -389,7 +389,13 @@ function ImGui:Text(text, config)
             -- The owning window/child ScrollingFrame reserves scrollbar space
             -- through its right UIPadding, so the label's own width is the true
             -- usable text width. Do not subtract the scrollbar twice here.
-            local width = math.max(label.AbsoluteSize.X, 1)
+            -- Keep a second, text-specific safety gutter. TextService's measured
+            -- widths can differ slightly from rendered TextLabel glyph advances,
+            -- especially with distributed em-space justification. This protects
+            -- the final words from the overlaid scrollbar even if the parent
+            -- ScrollingFrame's inset varies between windows.
+            local rightSafetyGutter = math.max(self.Style.ScrollbarSize, 9) + 24
+            local width = math.max(label.AbsoluteSize.X - rightSafetyGutter, 1)
             label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
         end
         refreshJustification()
