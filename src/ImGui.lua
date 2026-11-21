@@ -382,6 +382,7 @@ end
 function ImGui:BeginChild(id, size)
     assert(self._frameActive, "Call NewFrame() before BeginChild()")
     assert(self.CurrentParent, "Call Begin() before BeginChild()")
+    self._order += 1
     local child = self:_widget("Child:" .. tostring(id), "Frame", self.CurrentParent, {
         Name = "Child_" .. tostring(id), Size = size or UDim2.new(1, 0, 0, 120),
         BackgroundColor3 = self.Style.ChildBg, BorderSizePixel = 0, ClipsDescendants = true,
