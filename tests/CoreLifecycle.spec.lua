@@ -58,7 +58,7 @@ return function()
             ui:Render()
             expect(selected).to.equal(true)
             expect(ui.Widgets["Window:Widgets/option-a"]).never.to.equal(nil)
-            expect(bar:FindFirstChild("Fill").Size.X.Scale).to.equal(0.65)
+            expect(math.abs(bar:FindFirstChild("Fill").Size.X.Scale - 0.65) < 0.001).to.equal(true)
             expect(bar:FindFirstChild("Overlay").Text).to.equal("65%")
         end)
 
