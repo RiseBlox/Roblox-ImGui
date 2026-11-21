@@ -71,7 +71,7 @@ function ImGui.new(config)
         ScreenGui = screen, Style = table.clone(DEFAULT_STYLE), Windows = {}, Widgets = {},
         WindowStack = {}, CurrentWindow = nil, CurrentParent = nil, _scope = "", _scopeStack = {},
         FrameNumber = 0, _idStack = {}, _order = 0, _connections = {}, _callbacks = {},
-        _frameActive = false, _destroyed = false, _widgetConnections = {}, _windowZCounter = 0, _focusables = {},
+        _frameActive = false, _destroyed = false, _focusables = {},
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
 
@@ -204,7 +204,6 @@ function ImGui:_getWindow(name, flags)
 
         -- Reparenting the root moves it to the top of ScreenGui sibling order
         -- without rebuilding widgets or disturbing their connections.
-        self._windowZCounter += 1
         if root.Parent == self.ScreenGui then
             root.Parent = nil
             root.Parent = self.ScreenGui
@@ -728,7 +727,6 @@ function ImGui:Destroy()
     table.clear(self._scopeStack)
     table.clear(self._callbacks or {})
     table.clear(self._progressBars or {})
-    table.clear(self._widgetConnections or {})
     table.clear(self._focusables)
 end
 
