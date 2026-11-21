@@ -109,7 +109,8 @@ function ImGui:_widget(id, className, parent, properties)
         table.insert(self._connections, object.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
-                if currentWindow and currentWindow.Focus then currentWindow.Focus(input.Position) end
+                local accepted = currentWindow and currentWindow.Focus and currentWindow.Focus(input.Position) == true
+                object:SetAttribute("ImGuiInputAllowed", accepted == true)
             end
         end))
     end
@@ -188,7 +189,7 @@ function ImGui:_getWindow(name, flags)
                     end
                 end
             end
-            if topmost and topmost.Name ~= name then return end
+            if topmost and topmost.Name ~= name then return false end
         end
 
         local previous = self.Windows[self._focusedWindowName]
@@ -201,6 +202,7 @@ function ImGui:_getWindow(name, flags)
             root.Parent = nil
             root.Parent = self.ScreenGui
         end
+        return true
     end
     title.MouseEnter:Connect(function()
         if self._focusedWindowName ~= name then title.BackgroundColor3 = style.TitleBgHovered end
@@ -218,6 +220,7 @@ function ImGui:_getWindow(name, flags)
     local dragOrigin, startPosition
     table.insert(self._connections, title.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if focusWindow(input.Position) ~= true then return end
             dragOrigin, startPosition = input.Position, root.Position
         end
     end))
@@ -325,6 +328,7 @@ function ImGui:Button(label, config)
             end
         end)
         button.Activated:Connect(function()
+            if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local callback = self._callbacks and self._callbacks[config.ID or ("Button:" .. tostring(label))]
             if callback then callback() end
         end)
@@ -365,6 +369,7 @@ function ImGui:Checkbox(label, value, callback, id)
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
         button.Activated:Connect(function()
+            if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local nextValue = not (button:GetAttribute("ImGuiValue") == true)
             button:SetAttribute("ImGuiValue", nextValue)
             check.Visible = nextValue
@@ -415,6 +420,7 @@ function ImGui:RadioButton(label, active, callback, id)
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
         button.Activated:Connect(function()
+            if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local fn = self._callbacks[key]
             if fn then fn() end
         end)
@@ -533,6 +539,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         local dragging = false
         track.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                if track:GetAttribute("ImGuiInputAllowed") ~= true then return end
                 dragging = true
                 update(input)
             end
