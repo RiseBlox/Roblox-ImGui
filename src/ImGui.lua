@@ -369,6 +369,17 @@ function ImGui:Text(text, config)
         local function refreshJustification()
             if not label.Parent then return end
             local width = label.AbsoluteSize.X
+            -- ScrollingFrame scrollbars occupy the right edge of the visible content
+            -- area on Roblox. Reserve that width so justified lines never render
+            -- underneath the scrollbar thumb or track.
+            local ancestor = label.Parent
+            while ancestor and not ancestor:IsA("ScrollingFrame") do
+                ancestor = ancestor.Parent
+            end
+            if ancestor then
+                width -= (ancestor.ScrollBarThickness or 0) + 4
+            end
+            width = math.max(width, 1)
             label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
         end
         refreshJustification()
