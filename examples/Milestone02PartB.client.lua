@@ -23,7 +23,7 @@ local function draw()
     if firstFrame then flags.Position = UDim2.fromOffset(140, 100); firstFrame = false end
     if ui:Begin("M02 Part B - Numeric Controls", flags) then
         ui:Text("Milestone 02 / Part B")
-        ui:Text("Drag numeric controls horizontally. Edit inputs and press Enter or click away to commit.")
+        ui:Text("This long explanatory line should wrap automatically when the window is narrowed, then expand again when the window is widened. It should not run past the right edge.")
         ui:Separator("Drag controls")
         ui:DragFloat("Float drag", state.DragFloat, 0.01, 0, 1, function(value)
             state.DragFloat = value
@@ -34,6 +34,10 @@ local function draw()
             state.Changes += 1
         end, "m02b-drag-int")
         ui:Text(string.format("Drag values: %.3f | %d", state.DragFloat, state.DragInt))
+        ui:Separator("Slider fill visibility")
+        ui:SliderFloat("Float slider", state.SliderFloat or 0.35, 0, 1, function(value)
+            state.SliderFloat = value
+        end, "m02b-slider-float")
 
         ui:Separator("Numeric text inputs")
         ui:InputFloat("Float input", state.InputFloat, function(value)
