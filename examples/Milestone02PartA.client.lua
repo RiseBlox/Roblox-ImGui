@@ -16,13 +16,13 @@ local state = {
     ComboChanges = 0,
 }
 local connection
+local firstFrame = true
 
 local function draw()
     ui:NewFrame()
-    if ui:Begin("M02 Part A - Essential Widgets", {
-        Size = UDim2.fromOffset(480, 560),
-        Position = UDim2.fromOffset(100, 80),
-    }) then
+    local flags = { Size = UDim2.fromOffset(480, 560) }
+    if firstFrame then flags.Position = UDim2.fromOffset(100, 80); firstFrame = false end
+    if ui:Begin("M02 Part A - Essential Widgets", flags) then
         ui:Text("Milestone 02 / Part A")
         ui:Separator("Selectable")
         ui:Text("Click the row to toggle its selected state.")
