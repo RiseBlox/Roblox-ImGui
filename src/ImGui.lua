@@ -285,66 +285,63 @@ function ImGui:End()
 end
 
 local function justifyText(text, width, font, fontSize)
-    if width <= 1 then return text end
+    width = math.max(width - 2, 1)
     local output = {}
-    local emSpace = "\u{2003}"
-    local spaceWidth = math.max(TextService:GetTextSize(emSpace, fontSize, font, Vector2.new(10000, fontSize + 4)).X, 1)
     local function measure(value)
         return TextService:GetTextSize(value, fontSize, font, Vector2.new(10000, fontSize + 4)).X
     end
+
     for paragraph in (text .. "\n"):gmatch("(.-)\n") do
         if paragraph == "" then
             table.insert(output, "")
         else
             local words = {}
-            for word in paragraph:gmatch("%S+") do table.insert(words, word) end
-            local lines, current, currentWidth = {}, {}, 0
-            for _, word in ipairs(words) do
-                local wordWidth = measure(word)
-                local candidateWidth = currentWidth + (#current > 0 and spaceWidth or 0) + wordWidth
-                if #current > 0 and candidateWidth > width then
-                    table.insert(lines, {words = current, width = currentWidth})
-                    current, currentWidth = {}, 0
-                end
-                table.insert(current, word)
-                currentWidth += wordWidth
+            for word in paragraph:gmatch("%S+") do
+                table.insert(words, word)
             end
-            if #current > 0 then table.insert(lines, {words = current, width = currentWidth, last = true}) end
 
-            for _, line in ipairs(lines) do
-                local gaps = #line.words - 1
-                if gaps <= 0 or line.last then
-                    table.insert(output, table.concat(line.words, " "))
+            local lines, current = {}, {}
+            for _, word in ipairs(words) do
+                local candidate = table.concat(current, " ")
+                candidate = candidate == "" and word or (candidate .. " " .. word)
+                if #current > 0 and measure(candidate) > width then
+                    table.insert(lines, current)
+                    current = {word}
                 else
-                    local available = math.max(0, width - line.width)
-                    local perGap = math.max(1, math.floor(available / (spaceWidth * gaps)))
-                    local remainder = available - perGap * spaceWidth * gaps
-                    local gapParts = {}
-                    for gapIndex = 1, gaps do
-                        local count = perGap
-                        if remainder >= spaceWidth then
-                            count += 1
-                            remainder -= spaceWidth
+                    table.insert(current, word)
+                end
+            end
+            if #current > 0 then
+                table.insert(lines, current)
+            end
+
+            for lineIndex, lineWords in ipairs(lines) do
+                local gapCount = #lineWords - 1
+                if gapCount <= 0 or lineIndex == #lines then
+                    table.insert(output, table.concat(lineWords, " "))
+                else
+                    local gaps = table.create(gapCount, " ")
+                    local function build()
+                        local pieces = {lineWords[1]}
+                        for i = 1, gapCount do
+                            table.insert(pieces, gaps[i])
+                            table.insert(pieces, lineWords[i + 1])
                         end
-                        gapParts[gapIndex] = string.rep(emSpace, count)
+                        return table.concat(pieces)
                     end
-                    local pieces = {line.words[1]}
-                    for gapIndex = 1, gaps do
-                        table.insert(pieces, gapParts[gapIndex])
-                        table.insert(pieces, line.words[gapIndex + 1])
-                    end
-                    local justified = table.concat(pieces)
-                    while measure(justified) > width and perGap > 1 do
-                        perGap -= 1
-                        for gapIndex = 1, gaps do gapParts[gapIndex] = string.rep(emSpace, perGap) end
-                        pieces = {line.words[1]}
-                        for gapIndex = 1, gaps do
-                            table.insert(pieces, gapParts[gapIndex])
-                            table.insert(pieces, line.words[gapIndex + 1])
+
+                    -- Add spacing evenly, but never allow the rendered line
+                    -- to exceed the measured safe width.
+                    local gapIndex = 1
+                    while true do
+                        gaps[gapIndex] ..= " "
+                        if measure(build()) > width then
+                            gaps[gapIndex] = string.sub(gaps[gapIndex], 1, -2)
+                            break
                         end
-                        justified = table.concat(pieces)
+                        gapIndex = gapIndex % gapCount + 1
                     end
-                    table.insert(output, justified)
+                    table.insert(output, build())
                 end
             end
         end
@@ -370,10 +367,10 @@ function ImGui:Text(text, config)
     if not textPadding then
         textPadding = make("UIPadding", label, {
             Name = "ImGuiTextSafetyPadding",
-            PaddingRight = UDim.new(0, 56),
+            PaddingRight = UDim.new(0, 24),
         })
     else
-        textPadding.PaddingRight = UDim.new(0, 56)
+        textPadding.PaddingRight = UDim.new(0, 24)
     end
     if config.Wrap == false or config.Align ~= nil or config.RichText == true then
         label.TextWrapped = config.Wrap ~= false
@@ -387,7 +384,7 @@ function ImGui:Text(text, config)
             -- usable text width. Do not subtract the scrollbar twice here.
             -- Match the inner UIPadding above: justify only within the
             -- TextLabel's actual safe rendering rectangle.
-            local width = math.max(label.AbsoluteSize.X - 56, 1)
+            local width = math.max(label.AbsoluteSize.X - 24, 1)
             label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
         end
         refreshJustification()
