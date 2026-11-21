@@ -54,8 +54,9 @@ function ImGui.new(config)
     })
     local self = setmetatable({
         ScreenGui = screen, Style = table.clone(DEFAULT_STYLE), Windows = {}, Widgets = {},
-        WindowStack = {}, CurrentWindow = nil, CurrentParent = nil,
-        FrameNumber = 0, _idStack = {}, _order = 0, _connections = {}, _destroyed = false,
+        WindowStack = {}, CurrentWindow = nil, CurrentParent = nil, _scope = "", _scopeStack = {},
+        FrameNumber = 0, _idStack = {}, _order = 0, _connections = {}, _callbacks = {},
+        _frameActive = false, _destroyed = false,
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
     return self
@@ -69,7 +70,8 @@ function ImGui:GetID(id)
 end
 
 function ImGui:_widget(id, className, parent, properties)
-    local key = self:GetID(id)
+    local localKey = self:GetID(id)
+    local key = (self._scope ~= "" and self._scope .. "/" or "") .. localKey
     local object = self.Widgets[key]
     if not object or object.ClassName ~= className or not object.Parent then
         if object then object:Destroy() end
@@ -85,6 +87,7 @@ function ImGui:_widget(id, className, parent, properties)
 end
 
 function ImGui:_add(id, className, properties)
+    assert(self._frameActive, "Call NewFrame() before creating widgets")
     assert(self.CurrentParent, "Call Begin() before creating widgets")
     self._order += 1
     return self:_widget(id, className, self.CurrentParent, properties)
@@ -92,10 +95,14 @@ end
 
 function ImGui:NewFrame()
     assert(not self._destroyed, "This ImGui context has been destroyed")
+    assert(not self._frameActive, "NewFrame() called before the previous frame was rendered")
     self.FrameNumber += 1
     self._order = 0
     self.WindowStack = {}
+    self._scopeStack = {}
+    self._scope = ""
     self.CurrentWindow, self.CurrentParent = nil, nil
+    self._frameActive = true
 end
 
 function ImGui:_getWindow(name, flags)
@@ -152,6 +159,7 @@ function ImGui:_getWindow(name, flags)
 end
 
 function ImGui:Begin(name, flags)
+    assert(self._frameActive, "Call NewFrame() before Begin()")
     flags = flags or {}
     local window = self:_getWindow(tostring(name), flags)
     window.Visible = flags.Visible ~= false
@@ -165,7 +173,8 @@ function ImGui:Begin(name, flags)
     window.Content.Size = flags.NoTitleBar
         and UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -self.Style.WindowPadding.Y * 2)
         or UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -47)
-    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent })
+    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope })
+    self._scope = "Window:" .. tostring(name)
     self.CurrentWindow, self.CurrentParent = window, window.Content
     self._order = 0
     return window.Visible
@@ -175,6 +184,7 @@ function ImGui:End()
     assert(#self.WindowStack > 0, "End() called without a matching Begin()")
     local previous = table.remove(self.WindowStack)
     self.CurrentWindow, self.CurrentParent = previous.Window, previous.Parent
+    self._scope = previous.Scope
 end
 
 function ImGui:Text(text, config)
@@ -369,6 +379,7 @@ function ImGui:Spacing()
 end
 
 function ImGui:BeginChild(id, size)
+    assert(self._frameActive, "Call NewFrame() before BeginChild()")
     assert(self.CurrentParent, "Call Begin() before BeginChild()")
     local child = self:_widget("Child:" .. tostring(id), "Frame", self.CurrentParent, {
         Name = "Child_" .. tostring(id), Size = size or UDim2.new(1, 0, 0, 120),
@@ -376,7 +387,8 @@ function ImGui:BeginChild(id, size)
     })
     if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.FrameRounding) end
     if not child:FindFirstChildOfClass("UIListLayout") then vertical(child, self.Style.ItemSpacing.Y) end
-    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent })
+    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope })
+    self._scope = self._scope .. "/Child:" .. tostring(id)
     self.CurrentParent = child
     self._order = 0
     return true
@@ -402,6 +414,8 @@ function ImGui:ShowDemoWindow()
 end
 
 function ImGui:Render()
+    assert(not self._destroyed, "This ImGui context has been destroyed")
+    assert(self._frameActive, "Render() called without NewFrame()")
     assert(#self.WindowStack == 0, "Unclosed Begin()/BeginChild(): call End()/EndChild() before Render()")
     for _, object in pairs(self.Widgets) do
         if object.Parent then object.Visible = object:GetAttribute("ImGuiLastSeen") == self.FrameNumber end
@@ -409,15 +423,19 @@ function ImGui:Render()
     for _, window in pairs(self.Windows) do
         if window.Root.Parent then window.Root.Visible = window.Visible end
     end
+    self._frameActive = false
 end
 
 function ImGui:Destroy()
     if self._destroyed then return end
     self._destroyed = true
+    self._frameActive = false
     for _, connection in ipairs(self._connections) do connection:Disconnect() end
     self.ScreenGui:Destroy()
     table.clear(self.Widgets)
     table.clear(self.Windows)
+    table.clear(self.WindowStack)
+    table.clear(self._scopeStack)
     table.clear(self._callbacks or {})
 end
 
