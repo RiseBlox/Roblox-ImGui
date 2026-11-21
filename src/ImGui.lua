@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local TextService = game:GetService("TextService")
 
 local ImGui = {}
 ImGui.Version = "0.1.0"
@@ -31,7 +32,7 @@ local DEFAULT_STYLE = {
     WindowPadding = Vector2.new(8, 8), FramePadding = Vector2.new(4, 3),
     ItemSpacing = Vector2.new(8, 4), ItemInnerSpacing = Vector2.new(4, 4),
     WindowRounding = 0, ChildRounding = 0, FrameRounding = 0,
-    BorderSize = 1, FrameBorderSize = 0, ScrollbarSize = 14, GrabMinSize = 10,
+    BorderSize = 1, FrameBorderSize = 0, ScrollbarSize = 9, GrabMinSize = 10,
     TitleBarHeight = 22,
 }
 
@@ -389,7 +390,29 @@ function ImGui:ProgressBar(fraction, size, overlay, id)
         TextYAlignment = Enum.TextYAlignment.Center,
     })
     label.Text = tostring(overlay or "")
-    return bar
+
+    self._progressBars = self._progressBars or {}
+    local controller = self._progressBars[key]
+    if not controller then
+        controller = { Frame = bar }
+        function controller:SetFraction(nextFraction, nextOverlay)
+            local fractionValue = math.clamp(tonumber(nextFraction) or 0, 0, 1)
+            local fillObject = bar:FindFirstChild("Fill")
+            local labelObject = bar:FindFirstChild("Overlay")
+            if fillObject then fillObject.Size = UDim2.new(fractionValue, 0, 1, 0) end
+            if labelObject and nextOverlay ~= nil then labelObject.Text = tostring(nextOverlay) end
+            self.Fraction = fractionValue
+            return self
+        end
+        function controller:SetPercentage(percentage, nextOverlay)
+            return self:SetFraction((tonumber(percentage) or 0) / 100, nextOverlay or (tostring(math.floor((tonumber(percentage) or 0) + 0.5)) .. "%"))
+        end
+        controller.SetValue = controller.SetFraction
+        self._progressBars[key] = controller
+    end
+    controller.Frame = bar
+    controller:SetFraction(fraction, overlay)
+    return controller
 end
 
 function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
@@ -519,22 +542,46 @@ function ImGui:InputText(label, value, callback, config)
 end
 
 function ImGui:Separator(text)
+    local hasText = text ~= nil and tostring(text) ~= ""
     local frame = self:_add("Separator:" .. tostring(text or self._order), "Frame", {
-        Name = "Separator", Size = UDim2.new(1, 0, 0, text and 22 or 8), BackgroundTransparency = 1,
+        Name = "Separator", Size = UDim2.new(1, 0, 0, hasText and 22 or 8), BackgroundTransparency = 1,
     })
-    local line = frame:FindFirstChild("Line") or make("Frame", frame, {
-        Name = "Line", Position = UDim2.new(0, 0, 0, text and 11 or 4),
-        Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
-    })
-    if text then
-        local label = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-            Name = "Label", Position = UDim2.fromOffset(7, 0), Size = UDim2.new(0, 180, 0, 22),
-            BackgroundColor3 = self.Style.WindowBg, BorderSizePixel = 0,
-            Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
-            TextXAlignment = Enum.TextXAlignment.Left,
+    local lineY = hasText and 11 or 4
+    if not hasText then
+        local line = frame:FindFirstChild("Line") or make("Frame", frame, {
+            Name = "Line", Position = UDim2.new(0, 0, 0, lineY),
+            Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
         })
-        label.Text = tostring(text)
+        line.Size = UDim2.new(1, 0, 0, 1)
+        line.BackgroundColor3 = self.Style.Separator
+        return frame
     end
+
+    local labelText = tostring(text)
+    local measured = TextService:GetTextSize(labelText, self.Style.FontSize, self.Style.Font, Vector2.new(1000, 22))
+    local labelWidth = math.ceil(measured.X) + 12
+    local leftLine = frame:FindFirstChild("LeftLine") or make("Frame", frame, {
+        Name = "LeftLine", Position = UDim2.new(0, 0, 0, lineY),
+        Size = UDim2.new(0, 8, 0, 1), BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
+    })
+    local label = frame:FindFirstChild("Label") or make("TextLabel", frame, {
+        Name = "Label", Position = UDim2.fromOffset(8, 0), Size = UDim2.new(0, labelWidth, 0, 22),
+        BackgroundColor3 = self.Style.WindowBg, BorderSizePixel = 0,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = 2,
+    })
+    local rightLine = frame:FindFirstChild("RightLine") or make("Frame", frame, {
+        Name = "RightLine", Position = UDim2.new(0, 8 + labelWidth, 0, lineY),
+        Size = UDim2.new(1, -(8 + labelWidth), 0, 1),
+        BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
+    })
+    label.Text = labelText
+    label.Size = UDim2.new(0, labelWidth, 0, 22)
+    label.ZIndex = 2
+    leftLine.Size = UDim2.new(0, 8, 0, 1)
+    rightLine.Position = UDim2.new(0, 8 + labelWidth, 0, lineY)
+    rightLine.Size = UDim2.new(1, -(8 + labelWidth), 0, 1)
     return frame
 end
 
