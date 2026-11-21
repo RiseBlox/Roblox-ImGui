@@ -117,3 +117,10 @@ MIT. See [LICENSE](LICENSE).
 - `SliderFloat()` / `SliderInt()` use a visible accent fill and grab to communicate the current value.
 - Bounded `DragFloat()` / `DragInt()` controls show an accent fill proportional to their current value; integer drags display whole numbers.
 - `Separator(text)` uses a transparent label over the window content, with separator lines ending around the measured text width.
+
+
+### Slider interaction and text alignment
+
+- Slider tracks resolve focus against their owning window before accepting pointer input; this enables both float and integer slider callbacks.
+- Slider fill and grab positions update directly from the pointer's horizontal position while dragging.
+- `Text()` defaults to justified alignment when wrapping. Set `Align = Enum.TextXAlignment.Left` (or another supported alignment) to override it.
