@@ -85,17 +85,6 @@ function ImGui:GetID(id)
 end
 
 function ImGui:_widget(id, className, parent, properties)
-    -- Roblox ScrollingFrame scrollbars overlay child bounds instead of
-    -- shrinking the content viewport. Reduce full-width widgets themselves
-    -- so their text and controls end before the scrollbar.
-    if properties and properties.Size and parent and parent:IsA("ScrollingFrame") then
-        local size = properties.Size
-        if size.X.Scale > 0 then
-            local scrollbarBuffer = (parent.ScrollBarThickness or self.Style.ScrollbarSize) + 6
-            properties = table.clone(properties)
-            properties.Size = UDim2.new(size.X.Scale, size.X.Offset - scrollbarBuffer, size.Y.Scale, size.Y.Offset)
-        end
-    end
     local localKey = self:GetID(id)
     local key = (self._scope ~= "" and self._scope .. "/" or "") .. localKey
     local object = self.Widgets[key]
@@ -179,8 +168,8 @@ function ImGui:_getWindow(name, flags)
     })
     make("UIPadding", content, {
         PaddingLeft = UDim.new(0, style.WindowPadding.X),
-        -- Keep all content clear of the ScrollingFrame's overlaid scrollbar.
-        PaddingRight = UDim.new(0, style.WindowPadding.X),
+        -- Explicit right-side safe zone: normal padding + scrollbar clearance + buffer.
+        PaddingRight = UDim.new(0, style.WindowPadding.X + style.ScrollbarSize + 30),
         PaddingTop = UDim.new(0, style.WindowPadding.Y),
         PaddingBottom = UDim.new(0, style.WindowPadding.Y),
     })
@@ -1201,8 +1190,8 @@ function ImGui:BeginChild(id, size)
     if not child:FindFirstChildOfClass("UIPadding") then
         make("UIPadding", child, {
             PaddingLeft = UDim.new(0, self.Style.WindowPadding.X),
-            -- Child scrollbars also overlay the right edge of their content.
-            PaddingRight = UDim.new(0, self.Style.WindowPadding.X),
+            -- Match the window's explicit right-side scrollbar safe zone.
+            PaddingRight = UDim.new(0, self.Style.WindowPadding.X + self.Style.ScrollbarSize + 30),
             PaddingTop = UDim.new(0, self.Style.WindowPadding.Y),
             PaddingBottom = UDim.new(0, self.Style.WindowPadding.Y),
         })
