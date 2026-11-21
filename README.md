@@ -8,6 +8,7 @@ A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
 
 - Bring Dear ImGui's immediate-mode workflow and visual language to Roblox.
 - Use native Roblox GUI instances and client-side Luau.
+- Support both Roblox Studio LocalScripts and client executor environments through the same shared core; avoid hard dependencies on executor-only APIs.
 - Track the current Dear ImGui feature set while respecting Roblox platform constraints.
 - Provide stable IDs, style customization, reusable widgets, examples, and documentation.
 - Keep the legacy [Depthso-Roblox-ImGui](https://github.com/RiseBlox/Depthso-Roblox-ImGui) repository untouched.
@@ -22,7 +23,17 @@ A modern, Roblox-native immediate-mode GUI library inspired by Dear ImGui.
 - Separators, spacing, basic style palette, built-in demo
 - Retained Roblox instances keyed by widget ID
 
-This is an initial foundation, not feature parity. Docking, tables, menus, popups, navigation, draw lists, font atlas management, and a complete style editor remain planned work.
+This is an initial foundation, not feature parity. The core lifecycle is being hardened before the larger widget set is added.
+
+## Runtime compatibility
+
+The library targets client-side execution in both environments:
+
+- **Roblox Studio:** require the module from a `LocalScript`; by default, the context attaches to `LocalPlayer.PlayerGui`.
+- **Client executors:** the shared core uses standard Roblox client services and GUI APIs. Pass a valid client-side GUI parent with `ImGui.new({ Parent = ... })` when the default `PlayerGui` lookup is not appropriate.
+- **Shared-core rule:** executor-specific globals and APIs must remain optional and isolated in a future compatibility adapter. The core must not require a particular executor.
+
+This is an architectural target, not a claim of verified compatibility across every executor. Studio and executor behavior must be tested independently; differences in sandbox permissions, GUI parenting, input routing, and available APIs may affect support. The project does not provide anti-cheat bypasses, stealth, or executor-specific exploit functionality.
 
 ## Quick start
 
@@ -69,7 +80,7 @@ end)
 
 ## Development roadmap
 
-1. Core correctness: stable widget state, lifecycle cleanup, input connection ownership, nested scopes.
+1. Core correctness: frame lifecycle guards, stable widget identity across windows/children, lifecycle cleanup, input connection ownership, nested scopes, and Studio/executor smoke tests.
 2. Widget coverage: radio buttons, combos, selectables, progress bars, color editing, trees, tabs, tables, menus, popups, modal dialogs.
 3. Layout: groups, columns, table sizing, clipping, scrolling and layout rules.
 4. Interaction: keyboard navigation, focus, shortcuts, gamepad navigation, drag-and-drop.
