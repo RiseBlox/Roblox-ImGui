@@ -282,16 +282,71 @@ function ImGui:End()
     self._order = previous.Order
 end
 
+local function justifyText(text, width, font, fontSize)
+    if width <= 1 then return text end
+    local output = {}
+    local spaceWidth = TextService:GetTextSize("\u{2002}", fontSize, font, Vector2.new(10000, fontSize + 4)).X
+    spaceWidth = math.max(spaceWidth, 1)
+    for paragraph in (text .. "\n"):gmatch("(.-)\n") do
+        if paragraph == "" then
+            table.insert(output, "")
+        else
+            local words = {}
+            for word in paragraph:gmatch("%S+") do table.insert(words, word) end
+            local lines, current, currentWidth = {}, {}, 0
+            for _, word in ipairs(words) do
+                local wordWidth = TextService:GetTextSize(word, fontSize, font, Vector2.new(10000, fontSize + 4)).X
+                local candidateWidth = currentWidth + (#current > 0 and spaceWidth or 0) + wordWidth
+                if #current > 0 and candidateWidth > width then
+                    table.insert(lines, {words = current, width = currentWidth})
+                    current, currentWidth = {}, 0
+                end
+                if #current > 0 then currentWidth += spaceWidth end
+                table.insert(current, word)
+                currentWidth += wordWidth
+            end
+            if #current > 0 then table.insert(lines, {words = current, width = currentWidth, last = true}) end
+            for _, line in ipairs(lines) do
+                local gapCount = math.max(#line.words - 1, 0)
+                if gapCount == 0 or line.last then
+                    table.insert(output, table.concat(line.words, " "))
+                else
+                    local extraSpaces = math.max(1, math.floor((width - line.width) / (spaceWidth * gapCount) + 0.5))
+                    table.insert(output, table.concat(line.words, string.rep("\u{2002}", extraSpaces)))
+                end
+            end
+        end
+    end
+    return table.concat(output, "\n")
+end
+
 function ImGui:Text(text, config)
     config = config or {}
     local label = self:_add(config.ID or ("Text:" .. tostring(text)), "TextLabel", {
         Name = "Text", BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y,
         Size = UDim2.new(1, 0, 0, 18), Font = config.Font or self.Style.Font,
         TextSize = config.TextSize or self.Style.FontSize, TextColor3 = config.Color or self.Style.Text,
-        TextXAlignment = config.Align or Enum.TextXAlignment.Justify,
-        TextWrapped = config.Wrap ~= false, RichText = config.RichText == true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = config.Wrap ~= false and config.RichText == true,
+        RichText = config.RichText == true,
     })
-    label.Text = tostring(text == nil and "" or text)
+    local rawText = tostring(text == nil and "" or text)
+    if config.Wrap == false or config.Align == Enum.TextXAlignment.Left or config.RichText == true then
+        label.TextWrapped = config.Wrap ~= false
+        label.Text = rawText
+    else
+        label.TextWrapped = false
+        local function refreshJustification()
+            if not label.Parent then return end
+            local width = label.AbsoluteSize.X
+            label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
+        end
+        refreshJustification()
+        if label:GetAttribute("ImGuiJustifyConnected") ~= true then
+            label:SetAttribute("ImGuiJustifyConnected", true)
+            table.insert(self._connections, label:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshJustification))
+        end
+    end
     return label
 end
 
