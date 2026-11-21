@@ -367,10 +367,10 @@ function ImGui:Text(text, config)
     if not textPadding then
         textPadding = make("UIPadding", label, {
             Name = "ImGuiTextSafetyPadding",
-            PaddingRight = UDim.new(0, 5),
+            PaddingRight = UDim.new(0, 2),
         })
     else
-        textPadding.PaddingRight = UDim.new(0, 5)
+        textPadding.PaddingRight = UDim.new(0, 2)
     end
     if config.Wrap == false or config.Align ~= nil or config.RichText == true then
         label.TextWrapped = config.Wrap ~= false
@@ -384,7 +384,7 @@ function ImGui:Text(text, config)
             -- usable text width. Do not subtract the scrollbar twice here.
             -- Match the inner UIPadding above: justify only within the
             -- TextLabel's actual safe rendering rectangle.
-            local width = math.max(label.AbsoluteSize.X - 5, 1)
+            local width = math.max(label.AbsoluteSize.X - 2, 1)
             label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
         end
         refreshJustification()
@@ -875,6 +875,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     local function update(input)
         local alpha = math.clamp((input.Position.X - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
         local nextValue = minValue + (maxValue - minValue) * alpha
+        fill.Visible = alpha > 0
         fill.Size = UDim2.new(alpha, 0, 1, 0)
         positionGrab(alpha)
         valueText.Text = string.format("%.3f", nextValue)
@@ -883,6 +884,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     end
     value = math.clamp(tonumber(value) or minValue, minValue, maxValue)
     local initialAlpha = math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
+    fill.Visible = initialAlpha > 0
     fill.Size = UDim2.new(initialAlpha, 0, 1, 0)
     positionGrab(initialAlpha)
     valueText.Text = string.format("%.3f", value)
