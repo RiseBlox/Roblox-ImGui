@@ -376,23 +376,31 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         Name = "Slider", Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Size = UDim2.new(1, 0, 0, 19), BackgroundTransparency = 1,
+        Name = "Label", Position = UDim2.new(0.70, 0, 0, 0),
+        Size = UDim2.new(0.30, 0, 1, 0), BackgroundTransparency = 1,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
     })
-    title.Text = string.format("%s  %.3f", tostring(label), value)
+    title.Text = tostring(label)
     local track = frame:FindFirstChild("Track") or make("TextButton", frame, {
-        Name = "Track", Position = UDim2.fromOffset(0, 23), Size = UDim2.new(1, 0, 0, 12),
-        BackgroundColor3 = self.Style.FrameBg, BorderSizePixel = 0, Text = "", AutoButtonColor = false,
+        Name = "Track", Position = UDim2.fromOffset(0, 3), Size = UDim2.new(0.64, 0, 0, 18),
+        BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
+        BorderSizePixel = 0, Text = "", AutoButtonColor = false,
     })
-    if not track:FindFirstChildOfClass("UICorner") then round(track, 4) end
+    if not track:FindFirstChildOfClass("UICorner") then round(track, self.Style.FrameRounding) end
     local fill = track:FindFirstChild("Fill") or make("Frame", track, {
         Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
     })
-    if not fill:FindFirstChildOfClass("UICorner") then round(fill, 4) end
+    if not fill:FindFirstChildOfClass("UICorner") then round(fill, self.Style.FrameRounding) end
+    local valueText = track:FindFirstChild("Value") or make("TextLabel", track, {
+        Name = "Value", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = track.ZIndex + 2,
+    })
     local grab = track:FindFirstChild("Grab") or make("Frame", track, {
         Name = "Grab", AnchorPoint = Vector2.new(0.5, 0.5),
-        Size = UDim2.fromOffset(10, 16), BackgroundColor3 = self.Style.SliderGrab,
+        Size = UDim2.fromOffset(self.Style.GrabMinSize, 18), BackgroundColor3 = self.Style.SliderGrab,
         BorderSizePixel = 0, ZIndex = track.ZIndex + 1,
     })
     local function positionGrab(alpha)
@@ -403,13 +411,14 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         local nextValue = minValue + (maxValue - minValue) * alpha
         fill.Size = UDim2.new(alpha, 0, 1, 0)
         positionGrab(alpha)
-        title.Text = string.format("%s  %.3f", tostring(label), nextValue)
+        valueText.Text = string.format("%.3f", nextValue)
         local fn = self._callbacks and self._callbacks[key]
         if fn then fn(nextValue) end
     end
     local initialAlpha = math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
     fill.Size = UDim2.new(initialAlpha, 0, 1, 0)
     positionGrab(initialAlpha)
+    valueText.Text = string.format("%.3f", value)
     self._callbacks = self._callbacks or {}
     self._callbacks[key] = callback
     if track:GetAttribute("ImGuiSliderConnected") ~= true then
@@ -441,24 +450,26 @@ function ImGui:InputText(label, value, callback, config)
     config = config or {}
     local key = config.ID or ("Input:" .. tostring(label))
     local frame = self:_add(key, "Frame", {
-        Name = "InputText", Size = UDim2.new(1, 0, 0, config.Multiline and 72 or 42),
+        Name = "InputText", Size = UDim2.new(1, 0, 0, config.Multiline and 58 or 26),
         BackgroundTransparency = 1,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1,
+        Name = "Label", Position = UDim2.new(0.70, 0, 0, 0),
+        Size = UDim2.new(0.30, 0, 0, 24), BackgroundTransparency = 1,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
     })
     title.Text = tostring(label)
     local input = frame:FindFirstChild("Input") or make("TextBox", frame, {
-        Name = "Input", Position = UDim2.fromOffset(0, 19),
-        Size = UDim2.new(1, 0, 0, config.Multiline and 53 or 23),
+        Name = "Input", Position = UDim2.fromOffset(0, 1),
+        Size = UDim2.new(0.64, 0, 0, config.Multiline and 53 or 23),
         BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
         BorderSizePixel = 0, ClearTextOnFocus = false, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Left,
     })
     if not input:FindFirstChildOfClass("UICorner") then round(input, self.Style.FrameRounding) end
     input.PlaceholderText = config.Placeholder or ""
+    input.TextXAlignment = Enum.TextXAlignment.Left
     input.MultiLine = config.Multiline == true
     if not input:IsFocused() then input.Text = tostring(value or "") end
     if input:GetAttribute("ImGuiTextConnected") ~= true then
@@ -512,7 +523,15 @@ function ImGui:BeginChild(id, size)
         ScrollBarThickness = self.Style.ScrollbarSize, ScrollBarImageColor3 = self.Style.ScrollbarGrab,
         ScrollBarBackgroundColor3 = self.Style.ScrollbarBg,
     })
-    if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.FrameRounding) end
+    if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.ChildRounding) end
+    if not child:FindFirstChildOfClass("UIPadding") then
+        make("UIPadding", child, {
+            PaddingLeft = UDim.new(0, self.Style.WindowPadding.X),
+            PaddingRight = UDim.new(0, self.Style.WindowPadding.X),
+            PaddingTop = UDim.new(0, self.Style.WindowPadding.Y),
+            PaddingBottom = UDim.new(0, self.Style.WindowPadding.Y),
+        })
+    end
     if not child:FindFirstChildOfClass("UIListLayout") then vertical(child, self.Style.ItemSpacing.Y) end
     table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order })
     self._scope = self._scope .. "/Child:" .. tostring(id)
