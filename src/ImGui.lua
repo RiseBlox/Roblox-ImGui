@@ -70,7 +70,7 @@ function ImGui.new(config)
         ScreenGui = screen, Style = table.clone(DEFAULT_STYLE), Windows = {}, Widgets = {},
         WindowStack = {}, CurrentWindow = nil, CurrentParent = nil, _scope = "", _scopeStack = {},
         FrameNumber = 0, _idStack = {}, _order = 0, _connections = {}, _callbacks = {},
-        _frameActive = false, _destroyed = false,
+        _frameActive = false, _destroyed = false, _widgetConnections = {}, _windowZCounter = 0,
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
     return self
@@ -102,12 +102,18 @@ function ImGui:_widget(id, className, parent, properties)
     local currentWindow = self.CurrentWindow
     if currentWindow and object:GetAttribute("ImGuiFocusConnected") ~= true then
         object:SetAttribute("ImGuiFocusConnected", true)
-        object.InputBegan:Connect(function(input)
+        local function activateOwner()
+            if currentWindow and currentWindow.Focus then currentWindow.Focus() end
+        end
+        table.insert(self._connections, object.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
-                currentWindow.Focus()
+                activateOwner()
             end
-        end)
+        end))
+        if object:IsA("GuiObject") then
+            table.insert(self._connections, object.SelectionGained:Connect(activateOwner))
+        end
     end
     return object
 end
@@ -172,6 +178,14 @@ function ImGui:_getWindow(name, flags)
         if previous and previous.Title.Parent then previous.Title.BackgroundColor3 = style.TitleBg end
         self._focusedWindowName = name
         title.BackgroundColor3 = style.TitleBgActive
+
+        -- Reparenting the root moves it to the top of ScreenGui sibling order
+        -- without rebuilding widgets or disturbing their connections.
+        self._windowZCounter += 1
+        if root.Parent == self.ScreenGui then
+            root.Parent = nil
+            root.Parent = self.ScreenGui
+        end
     end
     title.Activated:Connect(focusWindow)
     title.MouseEnter:Connect(function()
@@ -689,6 +703,7 @@ function ImGui:Destroy()
     table.clear(self._scopeStack)
     table.clear(self._callbacks or {})
     table.clear(self._progressBars or {})
+    table.clear(self._widgetConnections or {})
 end
 
 return ImGui
