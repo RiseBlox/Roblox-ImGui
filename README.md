@@ -18,7 +18,6 @@ A Roblox-native GUI library inspired by Dear ImGui, with an immediate-mode-style
 - Context creation and teardown: ImGui.new and Destroy
 - Frame lifecycle: NewFrame, Begin, End, Render
 - Draggable windows with click-to-focus and click-to-front behavior, vertically scrollable window content, independently scrollable child regions, and a Dear ImGui-inspired dark theme with blue accents
-- Interactive widgets participate in Tab-based keyboard/gamepad selection; selecting a widget activates its owning window
 - Compact widget rows with right-side labels, square frames, minimal rounding, active-window title styling, and visible slider grabs
 - ID stack: PushID, PopID, GetID
 - Text, buttons, checkboxes, radio buttons, progress bars, float/integer sliders, text inputs
