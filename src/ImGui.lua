@@ -289,7 +289,7 @@ function ImGui:Text(text, config)
         Size = UDim2.new(1, 0, 0, 18), Font = config.Font or self.Style.Font,
         TextSize = config.TextSize or self.Style.FontSize, TextColor3 = config.Color or self.Style.Text,
         TextXAlignment = config.Align or Enum.TextXAlignment.Left,
-        TextWrapped = config.Wrap == true, RichText = config.RichText == true,
+        TextWrapped = config.Wrap ~= false, RichText = config.RichText == true,
     })
     label.Text = tostring(text == nil and "" or text)
     return label
@@ -813,7 +813,7 @@ end
 
 
 -- Numeric drag controls. Horizontal pointer movement changes the value by speed per pixel.
-function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id)
+function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, integer)
     speed = tonumber(speed) or 0.01
     minValue, maxValue = tonumber(minValue), tonumber(maxValue)
     assert(speed > 0, "DragFloat speed must be greater than zero")
@@ -836,12 +836,29 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id)
         TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
     })
     if not drag:FindFirstChildOfClass("UICorner") then round(drag, self.Style.FrameRounding) end
+    local dragFill = drag:FindFirstChild("Fill") or make("Frame", drag, {
+        Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = self.Style.Accent,
+        BackgroundTransparency = 0.12, BorderSizePixel = 0, ZIndex = drag.ZIndex,
+    })
+    if not dragFill:FindFirstChildOfClass("UICorner") then round(dragFill, self.Style.FrameRounding) end
     local valueLabel = drag:FindFirstChild("Value") or make("TextLabel", drag, {
         Name = "Value", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = drag.ZIndex + 1,
     })
-    valueLabel.Text = string.format("%.3f", value)
+    local function formatDragValue(number)
+        return integer and string.format("%d", math.floor(number + 0.5)) or string.format("%.3f", number)
+    end
+    local function updateDragFill(number)
+        if minValue ~= nil and maxValue ~= nil then
+            dragFill.Size = UDim2.new(math.clamp((number - minValue) / (maxValue - minValue), 0, 1), 0, 1, 0)
+        else
+            dragFill.Size = UDim2.fromScale(0, 1)
+        end
+    end
+    valueLabel.Text = formatDragValue(value)
+    updateDragFill(value)
     drag:SetAttribute("ImGuiDragValue", value)
     drag:SetAttribute("ImGuiDragSpeed", speed)
     drag:SetAttribute("ImGuiDragMin", minValue)
@@ -859,7 +876,8 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id)
             if low ~= nil then nextValue = math.max(nextValue, low) end
             if high ~= nil then nextValue = math.min(nextValue, high) end
             drag:SetAttribute("ImGuiDragValue", nextValue)
-            valueLabel.Text = string.format("%.3f", nextValue)
+            valueLabel.Text = formatDragValue(nextValue)
+            updateDragFill(nextValue)
             local fn = self._callbacks and self._callbacks[key]
             if fn then fn(nextValue) end
         end
@@ -890,7 +908,7 @@ end
 function ImGui:DragInt(label, value, speed, minValue, maxValue, callback, id)
     return self:DragFloat(label, value, speed or 1, minValue, maxValue, function(nextValue)
         if callback then callback(math.floor(nextValue + 0.5)) end
-    end, id)
+    end, id, true)
 end
 
 local function numericInput(self, label, value, callback, config, integer)
@@ -1026,7 +1044,7 @@ function ImGui:Separator(text)
     })
     local label = frame:FindFirstChild("Label") or make("TextLabel", frame, {
         Name = "Label", Position = UDim2.fromOffset(8, 0), Size = UDim2.new(0, labelWidth, 0, 22),
-        BackgroundColor3 = self.Style.WindowBg, BorderSizePixel = 0,
+        BackgroundTransparency = 1, BorderSizePixel = 0,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
         ZIndex = 2,
@@ -1037,6 +1055,7 @@ function ImGui:Separator(text)
         BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
     })
     label.Text = labelText
+    label.BackgroundTransparency = 1
     label.Size = UDim2.new(0, labelWidth, 0, 22)
     label.ZIndex = 2
     leftLine.Size = UDim2.new(0, 8, 0, 1)
