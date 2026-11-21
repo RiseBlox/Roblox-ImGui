@@ -239,11 +239,18 @@ end
 function ImGui:Button(label, config)
     config = config or {}
     local button = self:_add(config.ID or ("Button:" .. tostring(label)), "TextButton", {
-        Name = "Button", Size = config.Size or UDim2.new(1, 0, 0, 24),
+        Name = "Button", Size = config.Size or UDim2.new(0, 0, 0, 24),
+        AutomaticSize = config.Size and Enum.AutomaticSize.None or Enum.AutomaticSize.X,
         BackgroundColor3 = self.Style.Button, BackgroundTransparency = 0.12, BorderSizePixel = 0,
         AutoButtonColor = false, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextColor3 = self.Style.Text, Text = tostring(label),
     })
+    if not button:FindFirstChildOfClass("UIPadding") then
+        make("UIPadding", button, {
+            PaddingLeft = UDim.new(0, self.Style.FramePadding.X + 4),
+            PaddingRight = UDim.new(0, self.Style.FramePadding.X + 4),
+        })
+    end
     if not button:FindFirstChildOfClass("UICorner") then round(button, self.Style.FrameRounding) end
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
