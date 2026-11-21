@@ -11,22 +11,28 @@ ImGui.UpstreamTarget = "Dear ImGui 1.93.x"
 ImGui.__index = ImGui
 
 local DEFAULT_STYLE = {
-    -- Color palette approximating Dear ImGui's classic dark-blue style.
-    WindowBg = Color3.fromRGB(15, 15, 15), ChildBg = Color3.fromRGB(24, 24, 24),
+    -- Dear ImGui-inspired dark palette with its recognizable blue accent.
+    WindowBg = Color3.fromRGB(15, 15, 15), WindowBgTransparency = 0.05,
+    ChildBg = Color3.fromRGB(24, 24, 24), ChildBgTransparency = 0,
     PopupBg = Color3.fromRGB(24, 24, 24), Border = Color3.fromRGB(92, 92, 92),
     Text = Color3.fromRGB(235, 235, 235), TextDisabled = Color3.fromRGB(128, 128, 128),
-    FrameBg = Color3.fromRGB(41, 48, 59), FrameBgHovered = Color3.fromRGB(66, 112, 169),
-    FrameBgActive = Color3.fromRGB(66, 150, 250), TitleBg = Color3.fromRGB(10, 10, 10),
-    TitleBgActive = Color3.fromRGB(25, 55, 88), Button = Color3.fromRGB(66, 112, 169),
-    ButtonHovered = Color3.fromRGB(66, 150, 250), ButtonActive = Color3.fromRGB(45, 105, 180),
-    Header = Color3.fromRGB(66, 112, 169), HeaderHovered = Color3.fromRGB(66, 150, 250),
+    FrameBg = Color3.fromRGB(41, 74, 122), FrameBgTransparency = 0.4,
+    FrameBgHovered = Color3.fromRGB(66, 112, 169), FrameBgActive = Color3.fromRGB(66, 150, 250),
+    TitleBg = Color3.fromRGB(15, 15, 15), TitleBgHovered = Color3.fromRGB(30, 52, 78),
+    TitleBgActive = Color3.fromRGB(41, 74, 122),
+    Button = Color3.fromRGB(66, 150, 250), ButtonHovered = Color3.fromRGB(83, 164, 255),
+    ButtonActive = Color3.fromRGB(45, 105, 180),
+    Header = Color3.fromRGB(41, 74, 122), HeaderHovered = Color3.fromRGB(66, 112, 169),
     HeaderActive = Color3.fromRGB(45, 105, 180), Accent = Color3.fromRGB(66, 150, 250),
     CheckMark = Color3.fromRGB(66, 150, 250), SliderGrab = Color3.fromRGB(66, 150, 250),
     Separator = Color3.fromRGB(72, 72, 72), ScrollbarBg = Color3.fromRGB(20, 20, 20),
     ScrollbarGrab = Color3.fromRGB(75, 75, 75), ScrollbarGrabHovered = Color3.fromRGB(105, 105, 105),
-    Font = Enum.Font.Arial, FontSize = 14, WindowRounding = 4, FrameRounding = 3,
-    WindowPadding = Vector2.new(8, 8), ItemSpacing = Vector2.new(8, 4), BorderSize = 1,
-    ScrollbarSize = 12,
+    Font = Enum.Font.Code, FontSize = 13,
+    WindowPadding = Vector2.new(8, 8), FramePadding = Vector2.new(4, 3),
+    ItemSpacing = Vector2.new(8, 4), ItemInnerSpacing = Vector2.new(4, 4),
+    WindowRounding = 0, ChildRounding = 0, FrameRounding = 0,
+    BorderSize = 1, FrameBorderSize = 0, ScrollbarSize = 14, GrabMinSize = 10,
+    TitleBarHeight = 22,
 }
 
 local function make(className, parent, properties)
@@ -120,31 +126,48 @@ function ImGui:_getWindow(name, flags)
     local root = make("Frame", self.ScreenGui, {
         Name = "Window_" .. name, Position = flags.Position or UDim2.fromOffset(100, 100),
         Size = flags.Size or UDim2.fromOffset(430, 360), BackgroundColor3 = style.WindowBg,
-        BorderSizePixel = 0, Active = true, ClipsDescendants = true,
+        BackgroundTransparency = style.WindowBgTransparency, BorderSizePixel = 0,
+        Active = true, ClipsDescendants = true,
     })
     round(root, style.WindowRounding)
     make("UIStroke", root, { Color = style.Border, Thickness = style.BorderSize })
     local title = make("TextButton", root, {
-        Name = "TitleBar", Size = UDim2.new(1, 0, 0, 26), BackgroundColor3 = style.TitleBgActive,
+        Name = "TitleBar", Size = UDim2.new(1, 0, 0, style.TitleBarHeight), BackgroundColor3 = style.TitleBg,
         BorderSizePixel = 0, Text = name, TextColor3 = style.Text, Font = style.Font,
         TextSize = style.FontSize, TextXAlignment = Enum.TextXAlignment.Left,
         AutoButtonColor = false, Active = true,
     })
-    round(title, style.WindowRounding)
-    make("UIPadding", title, { PaddingLeft = UDim.new(0, style.WindowPadding.X) })
-    make("Frame", title, {
-        Position = UDim2.new(0, 0, 1, -8), Size = UDim2.new(1, 0, 0, 8),
-        BackgroundColor3 = style.TitleBg, BorderSizePixel = 0,
-    })
+    make("UIPadding", title, { PaddingLeft = UDim.new(0, style.FramePadding.X + 4) })
     local content = make("ScrollingFrame", root, {
-        Name = "Content", Position = UDim2.fromOffset(style.WindowPadding.X, 39),
-        Size = UDim2.new(1, -style.WindowPadding.X * 2, 1, -47),
+        Name = "Content", Position = UDim2.fromOffset(0, style.TitleBarHeight),
+        Size = UDim2.new(1, 0, 1, -style.TitleBarHeight),
         BackgroundTransparency = 1, BorderSizePixel = 0,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
-        ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.ScrollbarGrab, ScrollBarImageTransparency = 0,
+        ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.ScrollbarGrab,
+        ScrollBarImageTransparency = 0, ScrollBarBackgroundColor3 = style.ScrollbarBg,
+    })
+    make("UIPadding", content, {
+        PaddingLeft = UDim.new(0, style.WindowPadding.X),
+        PaddingRight = UDim.new(0, style.WindowPadding.X),
+        PaddingTop = UDim.new(0, style.WindowPadding.Y),
+        PaddingBottom = UDim.new(0, style.WindowPadding.Y),
     })
     vertical(content, style.ItemSpacing.Y)
+    local function focusWindow()
+        local previous = self.Windows[self._focusedWindowName]
+        if previous and previous.Title.Parent then previous.Title.BackgroundColor3 = style.TitleBg end
+        self._focusedWindowName = name
+        title.BackgroundColor3 = style.TitleBgActive
+    end
+    title.Activated:Connect(focusWindow)
+    title.MouseEnter:Connect(function()
+        if self._focusedWindowName ~= name then title.BackgroundColor3 = style.TitleBgHovered end
+    end)
+    title.MouseLeave:Connect(function()
+        if self._focusedWindowName ~= name then title.BackgroundColor3 = style.TitleBg end
+    end)
+    table.insert(self._connections, title.InputBegan:Connect(focusWindow))
 
     local dragOrigin, startPosition
     table.insert(self._connections, title.InputBegan:Connect(function(input)
@@ -178,11 +201,13 @@ function ImGui:Begin(name, flags)
     if flags.Position then window.Root.Position = flags.Position end
     window.Title.Visible = not flags.NoTitleBar
     window.Content.Position = flags.NoTitleBar
-        and UDim2.fromOffset(self.Style.WindowPadding.X, self.Style.WindowPadding.Y)
-        or UDim2.fromOffset(self.Style.WindowPadding.X, 33)
+        and UDim2.fromOffset(0, 0)
+        or UDim2.fromOffset(0, self.Style.TitleBarHeight)
     window.Content.Size = flags.NoTitleBar
-        and UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -self.Style.WindowPadding.Y * 2)
-        or UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -41)
+        and UDim2.fromScale(1, 1)
+        or UDim2.new(1, 0, 1, -self.Style.TitleBarHeight)
+    window.Title.BackgroundColor3 = self._focusedWindowName == tostring(name)
+        and self.Style.TitleBgActive or self.Style.TitleBg
     table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order })
     self._scope = "Window:" .. tostring(name)
     self.CurrentWindow, self.CurrentParent = window, window.Content
@@ -214,16 +239,23 @@ end
 function ImGui:Button(label, config)
     config = config or {}
     local button = self:_add(config.ID or ("Button:" .. tostring(label)), "TextButton", {
-        Name = "Button", Size = config.Size or UDim2.new(1, 0, 0, 28),
-        BackgroundColor3 = self.Style.Button, BorderSizePixel = 0,
+        Name = "Button", Size = config.Size or UDim2.new(1, 0, 0, 24),
+        BackgroundColor3 = self.Style.Button, BackgroundTransparency = 0.12, BorderSizePixel = 0,
         AutoButtonColor = false, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextColor3 = self.Style.Text, Text = tostring(label),
     })
     if not button:FindFirstChildOfClass("UICorner") then round(button, self.Style.FrameRounding) end
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
-        button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.ButtonHovered end)
-        button.MouseLeave:Connect(function() button.BackgroundColor3 = self.Style.Button end)
+        button.MouseEnter:Connect(function()
+            button.BackgroundColor3 = self.Style.ButtonHovered
+            button.BackgroundTransparency = 0
+        end)
+        button.MouseLeave:Connect(function()
+            button.BackgroundColor3 = self.Style.Button
+            button.BackgroundTransparency = 0.12
+        end)
+        button.MouseButton1Down:Connect(function() button.BackgroundColor3 = self.Style.ButtonActive end)
         button.Activated:Connect(function()
             local callback = self._callbacks and self._callbacks[config.ID or ("Button:" .. tostring(label))]
             if callback then callback() end
@@ -237,13 +269,13 @@ end
 function ImGui:Checkbox(label, value, callback, id)
     local key = id or ("Checkbox:" .. tostring(label))
     local button = self:_add(key, "TextButton", {
-        Name = "Checkbox", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1,
+        Name = "Checkbox", Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1,
         BorderSizePixel = 0, AutoButtonColor = false, Font = self.Style.Font,
         TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
     })
     local box = button:FindFirstChild("Box") or make("Frame", button, {
-        Name = "Box", Position = UDim2.fromOffset(0, 4), Size = UDim2.fromOffset(17, 17),
+        Name = "Box", Position = UDim2.fromOffset(0, 2), Size = UDim2.fromOffset(15, 15),
         BackgroundColor3 = self.Style.FrameBg, BorderSizePixel = 0,
     })
     if not box:FindFirstChildOfClass("UICorner") then round(box, 3) end
@@ -274,15 +306,15 @@ end
 function ImGui:RadioButton(label, active, callback, id)
     local key = id or ("RadioButton:" .. tostring(label))
     local button = self:_add(key, "TextButton", {
-        Name = "RadioButton", Size = UDim2.new(1, 0, 0, 26),
+        Name = "RadioButton", Size = UDim2.new(1, 0, 0, 20),
         BackgroundTransparency = 1, BorderSizePixel = 0,
         AutoButtonColor = false, Font = self.Style.Font,
         TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
     })
     local circle = button:FindFirstChild("Circle") or make("Frame", button, {
-        Name = "Circle", Position = UDim2.fromOffset(1, 4),
-        Size = UDim2.fromOffset(17, 17), BackgroundColor3 = self.Style.FrameBg,
+        Name = "Circle", Position = UDim2.fromOffset(1, 2),
+        Size = UDim2.fromOffset(15, 15), BackgroundColor3 = self.Style.FrameBg,
         BorderSizePixel = 0,
     })
     if not circle:FindFirstChildOfClass("UICorner") then
@@ -291,7 +323,7 @@ function ImGui:RadioButton(label, active, callback, id)
     end
     local dot = circle:FindFirstChild("Dot") or make("Frame", circle, {
         Name = "Dot", AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(9, 9),
+        Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(7, 7),
         BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
     })
     if not dot:FindFirstChildOfClass("UICorner") then
@@ -341,7 +373,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     assert(maxValue > minValue, "SliderFloat maxValue must be greater than minValue")
     local key = id or ("Slider:" .. tostring(label))
     local frame = self:_add(key, "Frame", {
-        Name = "Slider", Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1,
+        Name = "Slider", Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
         Name = "Label", Size = UDim2.new(1, 0, 0, 19), BackgroundTransparency = 1,
@@ -350,7 +382,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     })
     title.Text = string.format("%s  %.3f", tostring(label), value)
     local track = frame:FindFirstChild("Track") or make("TextButton", frame, {
-        Name = "Track", Position = UDim2.fromOffset(0, 25), Size = UDim2.new(1, 0, 0, 15),
+        Name = "Track", Position = UDim2.fromOffset(0, 23), Size = UDim2.new(1, 0, 0, 12),
         BackgroundColor3 = self.Style.FrameBg, BorderSizePixel = 0, Text = "", AutoButtonColor = false,
     })
     if not track:FindFirstChildOfClass("UICorner") then round(track, 4) end
@@ -358,15 +390,26 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
     })
     if not fill:FindFirstChildOfClass("UICorner") then round(fill, 4) end
+    local grab = track:FindFirstChild("Grab") or make("Frame", track, {
+        Name = "Grab", AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.fromOffset(10, 16), BackgroundColor3 = self.Style.SliderGrab,
+        BorderSizePixel = 0, ZIndex = track.ZIndex + 1,
+    })
+    local function positionGrab(alpha)
+        grab.Position = UDim2.new(math.clamp(alpha, 0, 1), 0, 0.5, 0)
+    end
     local function update(input)
         local alpha = math.clamp((input.Position.X - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
         local nextValue = minValue + (maxValue - minValue) * alpha
         fill.Size = UDim2.new(alpha, 0, 1, 0)
+        positionGrab(alpha)
         title.Text = string.format("%s  %.3f", tostring(label), nextValue)
         local fn = self._callbacks and self._callbacks[key]
         if fn then fn(nextValue) end
     end
-    fill.Size = UDim2.new(math.clamp((value - minValue) / (maxValue - minValue), 0, 1), 0, 1, 0)
+    local initialAlpha = math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
+    fill.Size = UDim2.new(initialAlpha, 0, 1, 0)
+    positionGrab(initialAlpha)
     self._callbacks = self._callbacks or {}
     self._callbacks[key] = callback
     if track:GetAttribute("ImGuiSliderConnected") ~= true then
@@ -398,7 +441,7 @@ function ImGui:InputText(label, value, callback, config)
     config = config or {}
     local key = config.ID or ("Input:" .. tostring(label))
     local frame = self:_add(key, "Frame", {
-        Name = "InputText", Size = UDim2.new(1, 0, 0, config.Multiline and 78 or 48),
+        Name = "InputText", Size = UDim2.new(1, 0, 0, config.Multiline and 72 or 42),
         BackgroundTransparency = 1,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
@@ -408,10 +451,10 @@ function ImGui:InputText(label, value, callback, config)
     })
     title.Text = tostring(label)
     local input = frame:FindFirstChild("Input") or make("TextBox", frame, {
-        Name = "Input", Position = UDim2.fromOffset(0, 21),
-        Size = UDim2.new(1, 0, 0, config.Multiline and 55 or 26),
-        BackgroundColor3 = self.Style.FrameBg, BorderSizePixel = 0,
-        ClearTextOnFocus = false, Font = self.Style.Font, TextSize = self.Style.FontSize,
+        Name = "Input", Position = UDim2.fromOffset(0, 19),
+        Size = UDim2.new(1, 0, 0, config.Multiline and 53 or 23),
+        BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
+        BorderSizePixel = 0, ClearTextOnFocus = false, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Left,
     })
     if not input:FindFirstChildOfClass("UICorner") then round(input, self.Style.FrameRounding) end
@@ -462,10 +505,12 @@ function ImGui:BeginChild(id, size)
     self._order += 1
     local child = self:_widget("Child:" .. tostring(id), "ScrollingFrame", self.CurrentParent, {
         Name = "Child_" .. tostring(id), Size = size or UDim2.new(1, 0, 0, 120),
-        BackgroundColor3 = self.Style.ChildBg, BorderSizePixel = 0, ClipsDescendants = true,
+        BackgroundColor3 = self.Style.ChildBg, BackgroundTransparency = self.Style.ChildBgTransparency,
+        BorderSizePixel = 0, ClipsDescendants = true,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
         ScrollBarThickness = self.Style.ScrollbarSize, ScrollBarImageColor3 = self.Style.ScrollbarGrab,
+        ScrollBarBackgroundColor3 = self.Style.ScrollbarBg,
     })
     if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.FrameRounding) end
     if not child:FindFirstChildOfClass("UIListLayout") then vertical(child, self.Style.ItemSpacing.Y) end
