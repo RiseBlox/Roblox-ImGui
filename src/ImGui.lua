@@ -97,6 +97,18 @@ function ImGui:_widget(id, className, parent, properties)
     end
     object.LayoutOrder = self._order
     object:SetAttribute("ImGuiLastSeen", self.FrameNumber)
+
+    -- Any click on a widget makes its owning window active.
+    local currentWindow = self.CurrentWindow
+    if currentWindow and object:GetAttribute("ImGuiFocusConnected") ~= true then
+        object:SetAttribute("ImGuiFocusConnected", true)
+        object.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                currentWindow.Focus()
+            end
+        end)
+    end
     return object
 end
 
@@ -168,7 +180,12 @@ function ImGui:_getWindow(name, flags)
     title.MouseLeave:Connect(function()
         if self._focusedWindowName ~= name then title.BackgroundColor3 = style.TitleBg end
     end)
-    table.insert(self._connections, title.InputBegan:Connect(focusWindow))
+    table.insert(self._connections, title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            focusWindow()
+        end
+    end))
 
     local dragOrigin, startPosition
     table.insert(self._connections, title.InputBegan:Connect(function(input)
@@ -187,7 +204,14 @@ function ImGui:_getWindow(name, flags)
             dragOrigin, startPosition = nil, nil
         end
     end))
-    window = { Root = root, Title = title, Content = content, Visible = true }
+    window = { Root = root, Title = title, Content = content, Visible = true, Focus = focusWindow }
+    -- Clicking empty space in the window body also activates the window.
+    table.insert(self._connections, root.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            focusWindow()
+        end
+    end))
     self.Windows[name] = window
     return window
 end
