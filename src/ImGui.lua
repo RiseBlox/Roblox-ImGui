@@ -291,8 +291,11 @@ function ImGui:Checkbox(label, value, callback, id)
         Text = "✓", TextColor3 = self.Style.CheckMark, Font = Enum.Font.GothamBold, TextSize = 14,
     })
     button.Text = "     " .. tostring(label)
-    button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
-    button.MouseLeave:Connect(function() button.BackgroundTransparency = 1 end)
+    if button:GetAttribute("ImGuiHoverConnected") ~= true then
+        button:SetAttribute("ImGuiHoverConnected", true)
+        button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
+        button.MouseLeave:Connect(function() button.BackgroundTransparency = 1 end)
+    end
     check.Visible = value == true
     button:SetAttribute("ImGuiValue", value == true)
     self._callbacks = self._callbacks or {}
@@ -340,8 +343,11 @@ function ImGui:RadioButton(label, active, callback, id)
     end
     dot.Visible = active == true
     button.Text = "     " .. tostring(label)
-    button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
-    button.MouseLeave:Connect(function() button.BackgroundTransparency = 1 end)
+    if button:GetAttribute("ImGuiHoverConnected") ~= true then
+        button:SetAttribute("ImGuiHoverConnected", true)
+        button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
+        button.MouseLeave:Connect(function() button.BackgroundTransparency = 1 end)
+    end
     self._callbacks = self._callbacks or {}
     self._callbacks[key] = callback
     if button:GetAttribute("ImGuiClickConnected") ~= true then
@@ -399,8 +405,11 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         BorderSizePixel = 0, Text = "", AutoButtonColor = false,
     })
     if not track:FindFirstChildOfClass("UICorner") then round(track, self.Style.FrameRounding) end
-    track.MouseEnter:Connect(function() track.BackgroundColor3 = self.Style.FrameBgHovered end)
-    track.MouseLeave:Connect(function() track.BackgroundColor3 = self.Style.FrameBg end)
+    if track:GetAttribute("ImGuiHoverConnected") ~= true then
+        track:SetAttribute("ImGuiHoverConnected", true)
+        track.MouseEnter:Connect(function() track.BackgroundColor3 = self.Style.FrameBgHovered end)
+        track.MouseLeave:Connect(function() track.BackgroundColor3 = self.Style.FrameBg end)
+    end
     local fill = track:FindFirstChild("Fill") or make("Frame", track, {
         Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
     })
@@ -483,8 +492,11 @@ function ImGui:InputText(label, value, callback, config)
     if not input:FindFirstChildOfClass("UICorner") then round(input, self.Style.FrameRounding) end
     input.PlaceholderText = config.Placeholder or ""
     input.TextXAlignment = Enum.TextXAlignment.Left
-    input.Focused:Connect(function() input.BackgroundColor3 = self.Style.FrameBgActive end)
-    input.FocusLost:Connect(function() input.BackgroundColor3 = self.Style.FrameBg end)
+    if input:GetAttribute("ImGuiFocusConnected") ~= true then
+        input:SetAttribute("ImGuiFocusConnected", true)
+        input.Focused:Connect(function() input.BackgroundColor3 = self.Style.FrameBgActive end)
+        input.FocusLost:Connect(function() input.BackgroundColor3 = self.Style.FrameBg end)
+    end
     input.MultiLine = config.Multiline == true
     if not input:IsFocused() then input.Text = tostring(value or "") end
     if input:GetAttribute("ImGuiTextConnected") ~= true then
