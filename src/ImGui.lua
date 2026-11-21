@@ -173,7 +173,7 @@ function ImGui:Begin(name, flags)
     window.Content.Size = flags.NoTitleBar
         and UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -self.Style.WindowPadding.Y * 2)
         or UDim2.new(1, -self.Style.WindowPadding.X * 2, 1, -47)
-    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope })
+    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order })
     self._scope = "Window:" .. tostring(name)
     self.CurrentWindow, self.CurrentParent = window, window.Content
     self._order = 0
@@ -185,6 +185,7 @@ function ImGui:End()
     local previous = table.remove(self.WindowStack)
     self.CurrentWindow, self.CurrentParent = previous.Window, previous.Parent
     self._scope = previous.Scope
+    self._order = previous.Order
 end
 
 function ImGui:Text(text, config)
@@ -387,7 +388,7 @@ function ImGui:BeginChild(id, size)
     })
     if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.FrameRounding) end
     if not child:FindFirstChildOfClass("UIListLayout") then vertical(child, self.Style.ItemSpacing.Y) end
-    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope })
+    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order })
     self._scope = self._scope .. "/Child:" .. tostring(id)
     self.CurrentParent = child
     self._order = 0
