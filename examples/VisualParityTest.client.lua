@@ -3,12 +3,18 @@
 -- Run from a client LocalScript in Studio, or in a client executor.
 -- This is a visual/interaction smoke test, not a substitute for TestEZ.
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local ImGui = require(ReplicatedStorage:WaitForChild("ImGui"))
-local player = Players.LocalPlayer
+local ImGui
+local moduleScript = ReplicatedStorage:FindFirstChild("ImGui")
+if moduleScript and moduleScript:IsA("ModuleScript") then
+    ImGui = require(moduleScript)
+else
+    -- Executor fallback for quick testing without installing a ModuleScript.
+    local source = game:HttpGet("https://raw.githubusercontent.com/RiseBlox/Roblox-ImGui/main/src/ImGui.lua")
+    ImGui = loadstring(source)()
+end
 
 local ui = ImGui.new({
     Name = "RobloxImGuiVisualParityTest",
