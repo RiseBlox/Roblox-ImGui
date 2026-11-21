@@ -123,4 +123,4 @@ MIT. See [LICENSE](LICENSE).
 
 - Slider tracks resolve focus against their owning window before accepting pointer input; this enables both float and integer slider callbacks.
 - Slider fill and grab positions update directly from the pointer's horizontal position while dragging.
-- `Text()` defaults to justified alignment when wrapping. Set `Align = Enum.TextXAlignment.Left` (or another supported alignment) to override it.
+- `Text()` uses custom dynamic justified wrapping by measuring words and distributing spacing across wrapped lines; Roblox does not provide a `Justify` enum value. Set `Align = Enum.TextXAlignment.Left`, `Center`, or `Right` to use native alignment instead. Rich-text labels retain Roblox native wrapping.
