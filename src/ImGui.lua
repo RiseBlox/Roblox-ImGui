@@ -163,7 +163,7 @@ function ImGui:_getWindow(name, flags)
         BackgroundTransparency = 1, BorderSizePixel = 0, Active = true,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
-        VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
+        VerticalScrollBarInset = Enum.ScrollBarInset.Always,
         ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.ScrollbarGrab,
         ScrollBarImageTransparency = 0,
     })
@@ -1185,7 +1185,7 @@ function ImGui:BeginChild(id, size)
         BorderSizePixel = 0, ClipsDescendants = true,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
-        VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
+        VerticalScrollBarInset = Enum.ScrollBarInset.Always,
         ScrollBarThickness = self.Style.ScrollbarSize, ScrollBarImageColor3 = self.Style.ScrollbarGrab,
     })
     if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.ChildRounding) end
