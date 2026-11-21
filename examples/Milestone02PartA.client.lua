@@ -62,8 +62,8 @@ local function draw()
         ui:BulletText("Back to the first level", 1)
 
         ui:Separator("Image")
-        ui:Text("Replace rbxassetid://0 with a valid image asset to see it.")
-        ui:Image("rbxassetid://0", UDim2.fromOffset(96, 96), {
+        ui:Text("Replace with a valid Texture ID to change the image.")
+        ui:Image("rbxassetid://6319951708", UDim2.fromOffset(96, 96), {
             ID = "m02-image",
             ScaleType = Enum.ScaleType.Fit,
             BackgroundTransparency = 0,
