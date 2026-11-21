@@ -26,7 +26,7 @@ local state = {
     Float = 0.35,
     Integer = 6,
     Input = "Hello Dear ImGui",
-    Progress = 0.65,
+    Progress = 65,
     ChildClicks = 0,
     ButtonClicks = 0,
 }
@@ -91,7 +91,8 @@ local function draw()
             ID = "test-input",
             Placeholder = "Type here",
         })
-        ui:ProgressBar(state.Progress, UDim2.new(1, 0, 0, 18), "65%", "test-progress")
+        state.Progress = (os.clock() * 10) % 100
+        ui:ProgressBar(state.Progress / 100, UDim2.new(1, 0, 0, 18), string.format("%d%%", math.floor(state.Progress + 0.5)), "test-progress")
 
         ui:Separator("Child region - independent scrolling")
         ui:BeginChild("scroll-child", UDim2.new(1, 0, 0, 150))
