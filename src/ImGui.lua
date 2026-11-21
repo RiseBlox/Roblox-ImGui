@@ -243,12 +243,14 @@ function ImGui:_getWindow(name, flags)
     end))
     window = { Root = root, Title = title, Content = content, Visible = true, Focus = focusWindow }
     -- Clicking empty space in the window body also activates the window.
-    table.insert(self._connections, root.InputBegan:Connect(function(input)
+    local function focusOnPointer(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
             focusWindow()
         end
-    end))
+    end
+    table.insert(self._connections, root.InputBegan:Connect(focusOnPointer))
+    table.insert(self._connections, content.InputBegan:Connect(focusOnPointer))
     self.Windows[name] = window
     return window
 end
