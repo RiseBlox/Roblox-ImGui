@@ -62,6 +62,29 @@ return function()
             expect(bar:FindFirstChild("Overlay").Text).to.equal("65%")
         end)
 
+
+        it("uses compact Dear ImGui-inspired style defaults", function()
+            expect(ui.Style.Font).to.equal(Enum.Font.Code)
+            expect(ui.Style.FontSize).to.equal(13)
+            expect(ui.Style.WindowRounding).to.equal(0)
+            expect(ui.Style.FrameRounding).to.equal(0)
+            expect(ui.Style.WindowPadding).to.equal(Vector2.new(8, 8))
+            expect(ui.Style.ItemSpacing).to.equal(Vector2.new(8, 4))
+            expect(ui.Style.Accent).to.equal(Color3.fromRGB(66, 150, 250))
+        end)
+
+        it("creates slider grab and label in the ImGui-style row", function()
+            ui:NewFrame()
+            ui:Begin("Slider")
+            ui:SliderFloat("Amount", 0.5, 0, 1, function() end, "amount")
+            ui:End()
+            ui:Render()
+            local slider = ui.Widgets["Window:Slider/amount"]
+            expect(slider:FindFirstChild("Track"):FindFirstChild("Grab")).never.to.equal(nil)
+            expect(slider:FindFirstChild("Track"):FindFirstChild("Value")).never.to.equal(nil)
+            expect(slider:FindFirstChild("Label").Position.X.Scale).to.equal(0.70)
+        end)
+
         it("destroys its GUI and rejects further frames", function()
             local screen = ui.ScreenGui
             ui:Destroy()
