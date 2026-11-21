@@ -109,3 +109,11 @@ The visual and API direction is informed by [Dear ImGui](https://github.com/ocor
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+
+### Text, slider, and separator layout
+
+- `Text()` wraps to the available content width by default; pass `{ Wrap = false }` to opt out.
+- `SliderFloat()` / `SliderInt()` use a visible accent fill and grab to communicate the current value.
+- Bounded `DragFloat()` / `DragInt()` controls show an accent fill proportional to their current value; integer drags display whole numbers.
+- `Separator(text)` uses a transparent label over the window content, with separator lines ending around the measured text width.
