@@ -20,6 +20,7 @@ local DEFAULT_STYLE = {
     SliderGrab = Color3.fromRGB(115, 155, 230), Separator = Color3.fromRGB(65, 65, 73),
     Font = Enum.Font.Code, FontSize = 14, WindowRounding = 7, FrameRounding = 4,
     WindowPadding = Vector2.new(10, 10), ItemSpacing = Vector2.new(7, 6), BorderSize = 1,
+    ScrollbarSize = 6,
 }
 
 local function make(className, parent, properties)
@@ -129,10 +130,13 @@ function ImGui:_getWindow(name, flags)
         Position = UDim2.new(0, 0, 1, -8), Size = UDim2.new(1, 0, 0, 8),
         BackgroundColor3 = style.TitleBg, BorderSizePixel = 0,
     })
-    local content = make("Frame", root, {
+    local content = make("ScrollingFrame", root, {
         Name = "Content", Position = UDim2.fromOffset(style.WindowPadding.X, 39),
         Size = UDim2.new(1, -style.WindowPadding.X * 2, 1, -47),
         BackgroundTransparency = 1, BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
+        ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.Border,
     })
     vertical(content, style.ItemSpacing.Y)
 
@@ -383,9 +387,12 @@ function ImGui:BeginChild(id, size)
     assert(self._frameActive, "Call NewFrame() before BeginChild()")
     assert(self.CurrentParent, "Call Begin() before BeginChild()")
     self._order += 1
-    local child = self:_widget("Child:" .. tostring(id), "Frame", self.CurrentParent, {
+    local child = self:_widget("Child:" .. tostring(id), "ScrollingFrame", self.CurrentParent, {
         Name = "Child_" .. tostring(id), Size = size or UDim2.new(1, 0, 0, 120),
         BackgroundColor3 = self.Style.ChildBg, BorderSizePixel = 0, ClipsDescendants = true,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
+        ScrollBarThickness = self.Style.ScrollbarSize, ScrollBarImageColor3 = self.Style.Border,
     })
     if not child:FindFirstChildOfClass("UICorner") then round(child, self.Style.FrameRounding) end
     if not child:FindFirstChildOfClass("UIListLayout") then vertical(child, self.Style.ItemSpacing.Y) end
