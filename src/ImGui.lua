@@ -183,7 +183,7 @@ function ImGui:_getWindow(name, flags)
     local content = make("ScrollingFrame", root, {
         Name = "Content", Position = UDim2.fromOffset(0, style.TitleBarHeight),
         Size = UDim2.new(1, 0, 1, -style.TitleBarHeight),
-        BackgroundTransparency = 1, BorderSizePixel = 0,
+        BackgroundTransparency = 1, BorderSizePixel = 0, Active = true,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(0, 0, 0, 0),
         ScrollingDirection = Enum.ScrollingDirection.Y, ScrollingEnabled = true,
         ScrollBarThickness = style.ScrollbarSize, ScrollBarImageColor3 = style.ScrollbarGrab,
