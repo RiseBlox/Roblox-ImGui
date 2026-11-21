@@ -256,6 +256,12 @@ function ImGui:Button(label, config)
             button.BackgroundTransparency = 0.12
         end)
         button.MouseButton1Down:Connect(function() button.BackgroundColor3 = self.Style.ButtonActive end)
+        button.MouseButton1Up:Connect(function()
+            if button:IsDescendantOf(self.ScreenGui) then
+                button.BackgroundColor3 = self.Style.ButtonHovered
+                button.BackgroundTransparency = 0
+            end
+        end)
         button.Activated:Connect(function()
             local callback = self._callbacks and self._callbacks[config.ID or ("Button:" .. tostring(label))]
             if callback then callback() end
@@ -276,14 +282,17 @@ function ImGui:Checkbox(label, value, callback, id)
     })
     local box = button:FindFirstChild("Box") or make("Frame", button, {
         Name = "Box", Position = UDim2.fromOffset(0, 2), Size = UDim2.fromOffset(15, 15),
-        BackgroundColor3 = self.Style.FrameBg, BorderSizePixel = 0,
+        BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
+        BorderSizePixel = 0,
     })
-    if not box:FindFirstChildOfClass("UICorner") then round(box, 3) end
+    if not box:FindFirstChildOfClass("UICorner") then round(box, 0) end
     local check = box:FindFirstChild("Check") or make("TextLabel", box, {
         Name = "Check", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
         Text = "✓", TextColor3 = self.Style.CheckMark, Font = Enum.Font.GothamBold, TextSize = 14,
     })
     button.Text = "     " .. tostring(label)
+    button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
+    button.MouseLeave:Connect(function() button.BackgroundTransparency = 1 end)
     check.Visible = value == true
     button:SetAttribute("ImGuiValue", value == true)
     self._callbacks = self._callbacks or {}
@@ -315,7 +324,7 @@ function ImGui:RadioButton(label, active, callback, id)
     local circle = button:FindFirstChild("Circle") or make("Frame", button, {
         Name = "Circle", Position = UDim2.fromOffset(1, 2),
         Size = UDim2.fromOffset(15, 15), BackgroundColor3 = self.Style.FrameBg,
-        BorderSizePixel = 0,
+        BackgroundTransparency = self.Style.FrameBgTransparency, BorderSizePixel = 0,
     })
     if not circle:FindFirstChildOfClass("UICorner") then
         make("UICorner", circle, { CornerRadius = UDim.new(1, 0) })
@@ -331,6 +340,8 @@ function ImGui:RadioButton(label, active, callback, id)
     end
     dot.Visible = active == true
     button.Text = "     " .. tostring(label)
+    button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
+    button.MouseLeave:Connect(function() button.BackgroundTransparency = 1 end)
     self._callbacks = self._callbacks or {}
     self._callbacks[key] = callback
     if button:GetAttribute("ImGuiClickConnected") ~= true then
@@ -388,6 +399,8 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         BorderSizePixel = 0, Text = "", AutoButtonColor = false,
     })
     if not track:FindFirstChildOfClass("UICorner") then round(track, self.Style.FrameRounding) end
+    track.MouseEnter:Connect(function() track.BackgroundColor3 = self.Style.FrameBgHovered end)
+    track.MouseLeave:Connect(function() track.BackgroundColor3 = self.Style.FrameBg end)
     local fill = track:FindFirstChild("Fill") or make("Frame", track, {
         Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
     })
@@ -470,6 +483,8 @@ function ImGui:InputText(label, value, callback, config)
     if not input:FindFirstChildOfClass("UICorner") then round(input, self.Style.FrameRounding) end
     input.PlaceholderText = config.Placeholder or ""
     input.TextXAlignment = Enum.TextXAlignment.Left
+    input.Focused:Connect(function() input.BackgroundColor3 = self.Style.FrameBgActive end)
+    input.FocusLost:Connect(function() input.BackgroundColor3 = self.Style.FrameBg end)
     input.MultiLine = config.Multiline == true
     if not input:IsFocused() then input.Text = tostring(value or "") end
     if input:GetAttribute("ImGuiTextConnected") ~= true then
