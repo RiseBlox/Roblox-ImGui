@@ -69,7 +69,7 @@ function ImGui.new(config)
     local self = setmetatable({
         ScreenGui = screen, Style = table.clone(DEFAULT_STYLE), Windows = {}, Widgets = {},
         WindowStack = {}, CurrentWindow = nil, CurrentParent = nil, _scope = "", _scopeStack = {},
-        FrameNumber = 0, _idStack = {}, _order = 0, _connections = {}, _callbacks = {},
+        FrameNumber = 0, _idStack = {}, _order = 0, _windowOrder = 0, _connections = {}, _callbacks = {},
         _frameActive = false, _destroyed = false,
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
@@ -109,7 +109,7 @@ function ImGui:_widget(id, className, parent, properties)
         table.insert(self._connections, object.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
-                activateOwner()
+                if currentWindow and currentWindow.Focus then currentWindow.Focus(input.Position) end
             end
         end))
     end
@@ -171,20 +171,35 @@ function ImGui:_getWindow(name, flags)
         PaddingBottom = UDim.new(0, style.WindowPadding.Y),
     })
     vertical(content, style.ItemSpacing.Y)
-    local function focusWindow()
+    self._windowOrder += 1
+    local window
+    local function focusWindow(pointerPosition)
+        -- Ignore pointer events delivered by obscured windows underneath the topmost one.
+        if pointerPosition then
+            local topmost, topmostOrder
+            for _, candidate in pairs(self.Windows) do
+                local candidateRoot = candidate.Root
+                if candidate.Visible and candidateRoot.Parent == self.ScreenGui then
+                    local position, size = candidateRoot.AbsolutePosition, candidateRoot.AbsoluteSize
+                    local inside = pointerPosition.X >= position.X and pointerPosition.X <= position.X + size.X
+                        and pointerPosition.Y >= position.Y and pointerPosition.Y <= position.Y + size.Y
+                    if inside and (not topmostOrder or candidate.FocusOrder > topmostOrder) then
+                        topmost, topmostOrder = candidate, candidate.FocusOrder
+                    end
+                end
+            end
+            if topmost and topmost.Name ~= name then return end
+        end
+
         local previous = self.Windows[self._focusedWindowName]
         if previous and previous.Title.Parent then previous.Title.BackgroundColor3 = style.TitleBg end
         self._focusedWindowName = name
         title.BackgroundColor3 = style.TitleBgActive
-
-        -- Reparenting the root moves it to the top of ScreenGui sibling order
-        -- without rebuilding widgets or disturbing their connections.
         if root.Parent == self.ScreenGui then
             root.Parent = nil
             root.Parent = self.ScreenGui
         end
     end
-    title.Activated:Connect(focusWindow)
     title.MouseEnter:Connect(function()
         if self._focusedWindowName ~= name then title.BackgroundColor3 = style.TitleBgHovered end
     end)
@@ -215,16 +230,16 @@ function ImGui:_getWindow(name, flags)
             dragOrigin, startPosition = nil, nil
         end
     end))
-    window = { Root = root, Title = title, Content = content, Visible = true, Focus = focusWindow }
     -- Clicking empty space in the window body also activates the window.
     local function focusOnPointer(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
-            focusWindow()
+            focusWindow(input.Position)
         end
     end
     table.insert(self._connections, root.InputBegan:Connect(focusOnPointer))
     table.insert(self._connections, content.InputBegan:Connect(focusOnPointer))
+    window = { Name = name, Root = root, Title = title, Content = content, Visible = true, Focus = focusWindow, FocusOrder = self._windowOrder }
     self.Windows[name] = window
     return window
 end
@@ -702,7 +717,7 @@ function ImGui:Destroy()
     table.clear(self._scopeStack)
     table.clear(self._callbacks or {})
     table.clear(self._progressBars or {})
-    table.clear(self._focusables)
+ 
 end
 
 return ImGui
