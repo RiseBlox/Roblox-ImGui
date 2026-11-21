@@ -81,7 +81,7 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 | Combo(label, selected, items, callback?, id?) | Render a dropdown; selected is a 1-based index or item string; callback receives index and item |
 | CollapsingHeader(label, id?) | Toggle a section; conditionally submit its contents when true |
 | TreeNode(label, id?) / TreePop() | Toggle a tree node; conditionally submit its contents when true |
-| BulletText(text) | Render a bullet-prefixed text row |
+| BulletText(text, level?) | Render a nested bullet row; level 1 = filled circle, 2 = hollow circle, 3 = square (deeper levels repeat the marker pattern) |
 | Image(image, size?, config?) | Render a Roblox image asset/content ID |
 | RadioButton(label, active, callback?, id?) | Render a radio button; callback runs when clicked |
 | ProgressBar(fraction, size?, overlay?, id?) | Render a normalized progress bar |
