@@ -193,6 +193,8 @@ function ImGui:_getWindow(name, flags)
 
         local previous = self.Windows[self._focusedWindowName]
         if previous and previous.Title.Parent then previous.Title.BackgroundColor3 = style.TitleBg end
+        self._windowOrder += 1
+        if window then window.FocusOrder = self._windowOrder end
         self._focusedWindowName = name
         title.BackgroundColor3 = style.TitleBgActive
         if root.Parent == self.ScreenGui then
@@ -209,7 +211,7 @@ function ImGui:_getWindow(name, flags)
     table.insert(self._connections, title.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
-            focusWindow()
+            focusWindow(input.Position)
         end
     end))
 
