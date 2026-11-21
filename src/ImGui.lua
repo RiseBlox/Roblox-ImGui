@@ -636,21 +636,29 @@ function ImGui:TreePop()
     self.CurrentParent, self._scope, self._order = previous.Parent, previous.Scope, previous.Order
 end
 
-function ImGui:BulletText(text)
-    local frame = self:_add("BulletText:" .. tostring(text) .. ":" .. self._order, "Frame", {
+-- BulletText uses a 1-based nesting level: filled circle, hollow circle, square.
+-- Levels beyond three repeat the marker pattern while continuing to indent.
+function ImGui:BulletText(text, level)
+    level = math.max(1, math.floor(tonumber(level) or 1))
+    local markers = { "•", "◦", "▪" }
+    local marker = markers[((level - 1) % #markers) + 1]
+    local indent = (level - 1) * 14
+    local frame = self:_add("BulletText:" .. tostring(text) .. ":" .. tostring(level) .. ":" .. self._order, "Frame", {
         Name = "BulletText", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1,
     })
     local bullet = frame:FindFirstChild("Bullet") or make("TextLabel", frame, {
         Name = "Bullet", Size = UDim2.fromOffset(12, 18), BackgroundTransparency = 1,
-        Text = "•", TextColor3 = self.Style.Text, Font = self.Style.Font, TextSize = self.Style.FontSize,
+        TextColor3 = self.Style.Text, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextXAlignment = Enum.TextXAlignment.Left,
     })
     local textLabel = frame:FindFirstChild("Text") or make("TextLabel", frame, {
-        Name = "Text", Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -12, 1, 0),
-        BackgroundTransparency = 1, Text = tostring(text), TextColor3 = self.Style.Text,
+        Name = "Text", BackgroundTransparency = 1, TextColor3 = self.Style.Text,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextXAlignment = Enum.TextXAlignment.Left,
     })
-    bullet.Text = "•"
+    bullet.Position = UDim2.fromOffset(indent, 0)
+    bullet.Text = marker
+    textLabel.Position = UDim2.fromOffset(indent + 12, 0)
+    textLabel.Size = UDim2.new(1, -(indent + 12), 1, 0)
     textLabel.Text = tostring(text)
     return frame
 end
