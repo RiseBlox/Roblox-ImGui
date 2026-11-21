@@ -85,6 +85,17 @@ function ImGui:GetID(id)
 end
 
 function ImGui:_widget(id, className, parent, properties)
+    -- UIPadding changes layout positions, but does not shrink GuiObject widths.
+    -- ScrollingFrame scrollbars overlay those full-width objects, so apply a
+    -- real width reduction to every widget parented directly to a scroll region.
+    if properties and properties.Size and parent and parent:IsA("ScrollingFrame") then
+        local size = properties.Size
+        if size.X.Scale > 0 then
+            properties = table.clone(properties)
+            local safeRight = self.Style.ScrollbarSize + 30
+            properties.Size = UDim2.new(size.X.Scale, size.X.Offset - safeRight, size.Y.Scale, size.Y.Offset)
+        end
+    end
     local localKey = self:GetID(id)
     local key = (self._scope ~= "" and self._scope .. "/" or "") .. localKey
     local object = self.Widgets[key]
@@ -168,8 +179,8 @@ function ImGui:_getWindow(name, flags)
     })
     make("UIPadding", content, {
         PaddingLeft = UDim.new(0, style.WindowPadding.X),
-        -- Explicit right-side safe zone: normal padding + scrollbar clearance + buffer.
-        PaddingRight = UDim.new(0, style.WindowPadding.X + style.ScrollbarSize + 30),
+        -- Standard padding only; _widget reduces actual GuiObject widths below.
+        PaddingRight = UDim.new(0, style.WindowPadding.X),
         PaddingTop = UDim.new(0, style.WindowPadding.Y),
         PaddingBottom = UDim.new(0, style.WindowPadding.Y),
     })
@@ -1190,8 +1201,8 @@ function ImGui:BeginChild(id, size)
     if not child:FindFirstChildOfClass("UIPadding") then
         make("UIPadding", child, {
             PaddingLeft = UDim.new(0, self.Style.WindowPadding.X),
-            -- Match the window's explicit right-side scrollbar safe zone.
-            PaddingRight = UDim.new(0, self.Style.WindowPadding.X + self.Style.ScrollbarSize + 30),
+            -- Standard padding only; _widget reduces actual GuiObject widths below.
+            PaddingRight = UDim.new(0, self.Style.WindowPadding.X),
             PaddingTop = UDim.new(0, self.Style.WindowPadding.Y),
             PaddingBottom = UDim.new(0, self.Style.WindowPadding.Y),
         })
