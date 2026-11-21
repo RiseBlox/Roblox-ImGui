@@ -1,4 +1,3 @@
---!strict
 -- Roblox-ImGui visual parity smoke test.
 -- Run from a client LocalScript in Studio, or in a client executor.
 -- This is a visual/interaction smoke test, not a substitute for TestEZ.
@@ -6,7 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local ImGui
+local ImGui: any
 local moduleScript = ReplicatedStorage:FindFirstChild("ImGui")
 if moduleScript and moduleScript:IsA("ModuleScript") then
     ImGui = require(moduleScript)
