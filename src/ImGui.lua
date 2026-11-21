@@ -169,8 +169,8 @@ function ImGui:_getWindow(name, flags)
     })
     make("UIPadding", content, {
         PaddingLeft = UDim.new(0, style.WindowPadding.X),
-        -- Standard padding; _widget reserves the scrollbar gutter in child widths.
-        PaddingRight = UDim.new(0, style.WindowPadding.X),
+        -- Keep the right gutter compact and identical across window content.
+        PaddingRight = UDim.new(0, 4),
         PaddingTop = UDim.new(0, style.WindowPadding.Y),
         PaddingBottom = UDim.new(0, style.WindowPadding.Y),
     })
@@ -367,10 +367,10 @@ function ImGui:Text(text, config)
     if not textPadding then
         textPadding = make("UIPadding", label, {
             Name = "ImGuiTextSafetyPadding",
-            PaddingRight = UDim.new(0, 1),
+            PaddingRight = UDim.new(0, 0),
         })
     else
-        textPadding.PaddingRight = UDim.new(0, 1)
+        textPadding.PaddingRight = UDim.new(0, 0)
     end
     if config.Wrap == false or config.Align ~= nil or config.RichText == true then
         label.TextWrapped = config.Wrap ~= false
@@ -382,9 +382,10 @@ function ImGui:Text(text, config)
             -- The owning window/child ScrollingFrame reserves scrollbar space
             -- through its right UIPadding, so the label's own width is the true
             -- usable text width. Do not subtract the scrollbar twice here.
-            -- Match the inner UIPadding above: justify only within the
-            -- TextLabel's actual safe rendering rectangle.
-            local width = math.max(label.AbsoluteSize.X - 1, 1)
+            -- The parent content container owns the shared right gutter.
+            -- Do not add another per-label inset: that made otherwise identical
+            -- windows end their justified lines at different positions.
+            local width = math.max(label.AbsoluteSize.X, 1)
             label.Text = justifyText(rawText, width, config.Font or self.Style.Font, config.TextSize or self.Style.FontSize)
         end
         refreshJustification()
@@ -1228,7 +1229,7 @@ function ImGui:BeginChild(id, size)
     if not child:FindFirstChildOfClass("UIPadding") then
         make("UIPadding", child, {
             PaddingLeft = UDim.new(0, self.Style.WindowPadding.X),
-            PaddingRight = UDim.new(0, self.Style.WindowPadding.X),
+            PaddingRight = UDim.new(0, 4),
             PaddingTop = UDim.new(0, self.Style.WindowPadding.Y),
             PaddingBottom = UDim.new(0, self.Style.WindowPadding.Y),
         })
