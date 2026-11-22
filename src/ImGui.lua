@@ -1391,11 +1391,13 @@ local function openLayoutScope(self, name, paddingLeft)
         AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
         BorderSizePixel = 0, LayoutOrder = self._order,
     })
-    vertical(container, self.Style.ItemSpacing.Y)
+    if not container:FindFirstChildOfClass("UIListLayout") then vertical(container, self.Style.ItemSpacing.Y) end
     if paddingLeft and paddingLeft > 0 then
-        make("UIPadding", container, { PaddingLeft = UDim.new(0, paddingLeft) })
+        local padding = container:FindFirstChild("ImGuiIndentPadding")
+        if not padding then padding = make("UIPadding", container, { Name = "ImGuiIndentPadding" }) end
+        padding.PaddingLeft = UDim.new(0, paddingLeft)
     end
-    table.insert(self._groupStack, { Parent = parent, LastItem = self._lastItem, Kind = name })
+    table.insert(self._groupStack, { Parent = parent, LastItem = self._lastItem, Container = container, Kind = name })
     self.CurrentParent = container
     self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
     return container
@@ -1406,7 +1408,7 @@ local function closeLayoutScope(self, name)
     assert(scope and scope.Kind == name, name .. "() called without a matching opener")
     table.remove(self._groupStack)
     self.CurrentParent = scope.Parent
-    self._lastItem, self._sameLineRow, self._sameLineRequested = scope.LastItem, nil, false
+    self._lastItem, self._sameLineRow, self._sameLineRequested = scope.Container, nil, false
 end
 
 function ImGui:Indent(width)
