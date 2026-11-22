@@ -1166,51 +1166,51 @@ function ImGui:Separator(text)
     local frame = self:_add("Separator:" .. tostring(text or self._order), "Frame", {
         Name = "Separator", Size = UDim2.new(1, 0, 0, hasText and 22 or 8), BackgroundTransparency = 1,
     })
-    -- Separators get their own balanced inset so neither line touches the
-    -- content edge. Keep a clear gap on both sides of the label.
-    local horizontalInset = 8
+    local contentInset = 8
     local labelGap = 8
     local lineY = hasText and 11 or 4
+
     if not hasText then
         local line = frame:FindFirstChild("Line") or make("Frame", frame, {
-            Name = "Line", Position = UDim2.new(0, horizontalInset, 0, lineY),
-            Size = UDim2.new(1, -(horizontalInset * 2), 0, 1),
+            Name = "Line", Position = UDim2.new(0, contentInset, 0, lineY),
+            Size = UDim2.new(1, -(contentInset * 2), 0, 1),
             BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
         })
-        line.Position = UDim2.new(0, horizontalInset, 0, lineY)
-        line.Size = UDim2.new(1, -(horizontalInset * 2), 0, 1)
+        line.Position = UDim2.new(0, contentInset, 0, lineY)
+        line.Size = UDim2.new(1, -(contentInset * 2), 0, 1)
         line.BackgroundColor3 = self.Style.Separator
         return frame
     end
 
+    -- The parent ScrollingFrame already applies WindowPadding. Start the
+    -- caption at this frame's origin so it aligns with every other widget.
+    -- Only the separator rule gets an inset at its far right edge.
     local labelText = tostring(text)
     local measured = TextService:GetTextSize(labelText, self.Style.FontSize, self.Style.Font, Vector2.new(1000, 22))
-    local labelWidth = math.ceil(measured.X) + 4
-    local labelX = horizontalInset + labelGap
-    local leftLine = frame:FindFirstChild("LeftLine") or make("Frame", frame, {
-        Name = "LeftLine", Position = UDim2.new(0, horizontalInset, 0, lineY),
-        Size = UDim2.new(0, labelGap, 0, 1), BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
-    })
+    local labelWidth = math.ceil(measured.X) + 2
     local label = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Position = UDim2.fromOffset(labelX, 0), Size = UDim2.new(0, labelWidth, 0, 22),
+        Name = "Label", Position = UDim2.fromOffset(0, 0), Size = UDim2.new(0, labelWidth, 0, 22),
         BackgroundTransparency = 1, BorderSizePixel = 0,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
         ZIndex = 2,
     })
     local rightLine = frame:FindFirstChild("RightLine") or make("Frame", frame, {
-        Name = "RightLine", Position = UDim2.new(0, labelX + labelWidth + labelGap, 0, lineY),
-        Size = UDim2.new(1, -(labelX + labelWidth + labelGap + horizontalInset), 0, 1),
+        Name = "RightLine", Position = UDim2.new(0, labelWidth + labelGap, 0, lineY),
+        Size = UDim2.new(1, -(labelWidth + labelGap + contentInset), 0, 1),
         BackgroundColor3 = self.Style.Separator, BorderSizePixel = 0,
     })
+    local leftLine = frame:FindFirstChild("LeftLine")
+    if leftLine then leftLine:Destroy() end
+
     label.Text = labelText
     label.BackgroundTransparency = 1
+    label.Position = UDim2.fromOffset(0, 0)
     label.Size = UDim2.new(0, labelWidth, 0, 22)
     label.ZIndex = 2
-    leftLine.Position = UDim2.new(0, horizontalInset, 0, lineY)
-    leftLine.Size = UDim2.new(0, labelGap, 0, 1)
-    rightLine.Position = UDim2.new(0, labelX + labelWidth + labelGap, 0, lineY)
-    rightLine.Size = UDim2.new(1, -(labelX + labelWidth + labelGap + horizontalInset), 0, 1)
+    rightLine.Position = UDim2.new(0, labelWidth + labelGap, 0, lineY)
+    rightLine.Size = UDim2.new(1, -(labelWidth + labelGap + contentInset), 0, 1)
+    rightLine.BackgroundColor3 = self.Style.Separator
     return frame
 end
 
