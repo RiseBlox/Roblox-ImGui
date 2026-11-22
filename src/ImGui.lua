@@ -321,7 +321,8 @@ function ImGui:Begin(name, flags)
         or UDim2.new(1, 0, 1, -self.Style.TitleBarHeight)
     window.Title.BackgroundColor3 = self._focusedWindowName == tostring(name)
         and self.Style.TitleBgActive or self.Style.TitleBg
-    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order })
+    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order, LastItem = self._lastItem, SameLineRow = self._sameLineRow, SameLineRequested = self._sameLineRequested })
+    self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
     self._scope = "Window:" .. tostring(name)
     self.CurrentWindow, self.CurrentParent = window, window.Content
     self._order = 0
@@ -334,6 +335,7 @@ function ImGui:End()
     self.CurrentWindow, self.CurrentParent = previous.Window, previous.Parent
     self._scope = previous.Scope
     self._order = previous.Order
+    self._lastItem, self._sameLineRow, self._sameLineRequested = previous.LastItem, previous.SameLineRow, previous.SameLineRequested
 end
 
 local function justifyText(text, width, font, fontSize)
@@ -1456,7 +1458,8 @@ function ImGui:BeginChild(id, size)
         })
     end
     if not child:FindFirstChildOfClass("UIListLayout") then vertical(child, self.Style.ItemSpacing.Y) end
-    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order })
+    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order, LastItem = self._lastItem, SameLineRow = self._sameLineRow, SameLineRequested = self._sameLineRequested })
+    self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
     self._scope = self._scope .. "/Child:" .. tostring(id)
     self.CurrentParent = child
     self._order = 0
