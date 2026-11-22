@@ -1161,6 +1161,83 @@ function ImGui:InputText(label, value, callback, config)
     return input.Text
 end
 
+local function colorPreviewRow(self, label, color, key, toggle)
+    color = typeof(color) == "Color3" and color or Color3.new(1, 1, 1)
+    local frame = self:_add(key, "Frame", {
+        Name = "ColorControl", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1,
+    })
+    local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
+        Name = "Label", Size = UDim2.new(0.36, 0, 1, 0), BackgroundTransparency = 1,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
+    })
+    title.Text = tostring(label)
+    local swatch = frame:FindFirstChild("Swatch") or make("TextButton", frame, {
+        Name = "Swatch", Position = UDim2.new(0.38, 0, 0, 1), Size = UDim2.new(0.62, 0, 0, 24),
+        BackgroundColor3 = color, BorderSizePixel = 0, AutoButtonColor = false,
+        Text = "", ZIndex = 2,
+    })
+    swatch.BackgroundColor3 = color
+    local hex = string.format("#%02X%02X%02X",
+        math.floor(color.R * 255 + 0.5),
+        math.floor(color.G * 255 + 0.5),
+        math.floor(color.B * 255 + 0.5))
+    local value = swatch:FindFirstChild("Hex") or make("TextLabel", swatch, {
+        Name = "Hex", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = Color3.new(1, 1, 1),
+        TextStrokeTransparency = 0.65, Text = hex, ZIndex = 3,
+    })
+    value.Text = hex
+    if toggle and swatch:GetAttribute("ImGuiColorToggleConnected") ~= true then
+        swatch:SetAttribute("ImGuiColorToggleConnected", true)
+        local ownerWindow = self.CurrentWindow
+        swatch.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
+                swatch:SetAttribute("ImGuiInputAllowed", allowed == true)
+            end
+        end)
+        swatch.Activated:Connect(function()
+            if swatch:GetAttribute("ImGuiInputAllowed") ~= true then return end
+            frame:SetAttribute("ImGuiColorOpen", frame:GetAttribute("ImGuiColorOpen") ~= true)
+        end)
+    end
+    return frame
+end
+
+local function submitColorChannels(self, key, color, callback)
+    local hue, saturation, brightness = Color3.toHSV(color)
+    self:SliderFloat("Hue", hue, 0, 1, function(nextHue)
+        if callback then callback(Color3.fromHSV(nextHue, saturation, brightness)) end
+    end, key .. "/Hue")
+    self:SliderFloat("Saturation", saturation, 0, 1, function(nextSaturation)
+        if callback then callback(Color3.fromHSV(hue, nextSaturation, brightness)) end
+    end, key .. "/Saturation")
+    self:SliderFloat("Value", brightness, 0, 1, function(nextBrightness)
+        if callback then callback(Color3.fromHSV(hue, saturation, nextBrightness)) end
+    end, key .. "/Value")
+end
+
+-- Compact color editor. Clicking the swatch expands HSV controls beneath it.
+function ImGui:ColorEdit(label, color, callback, id)
+    local key = id or ("ColorEdit:" .. tostring(label))
+    local frame = colorPreviewRow(self, label, color, key, true)
+    self._callbacks = self._callbacks or {}
+    self._callbacks[key] = callback
+    if frame:GetAttribute("ImGuiColorOpen") == true then
+        submitColorChannels(self, key, color, callback)
+    end
+    return color
+end
+
+-- Always-visible HSV color picker with a live color preview.
+function ImGui:ColorPicker(label, color, callback, id)
+    local key = id or ("ColorPicker:" .. tostring(label))
+    colorPreviewRow(self, label, color, key, false)
+    submitColorChannels(self, key, color, callback)
+    return color
+end
+
 function ImGui:Separator(text)
     local hasText = text ~= nil and tostring(text) ~= ""
     local frame = self:_add("Separator:" .. tostring(text or self._order), "Frame", {
