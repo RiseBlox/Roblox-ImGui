@@ -20,7 +20,7 @@ A Roblox-native GUI library inspired by Dear ImGui, with an immediate-mode-style
 - Draggable windows with click-to-focus and click-to-front behavior, vertically scrollable window content, independently scrollable child regions, and a Dear ImGui-inspired dark theme with blue accents
 - Compact widget rows with right-side labels, square frames, minimal rounding, active-window title styling, and visible slider grabs
 - ID stack: PushID, PopID, GetID
-- Text, buttons, checkboxes, radio buttons, selectables, combo boxes, collapsing headers, tree nodes, bullet text, images, progress bars, float/integer sliders, drag controls, numeric inputs, and text inputs
+- Text, buttons, checkboxes, radio buttons, selectables, combo boxes, collapsing headers, tree nodes, bullet text, images, progress bars, float/integer sliders, drag controls, numeric inputs, text inputs, and HSV color edit/picker controls
 - Separators, spacing, a configurable ImGui-style palette/layout, built-in demo
 - Retained Roblox instances keyed by widget ID; widgets are resubmitted each frame and their GUI instances are reused
 
@@ -85,7 +85,7 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 | Image(image, size?, config?) | Render a Roblox image asset/content ID |
 | RadioButton(label, active, callback?, id?) | Render a radio button; callback runs when clicked |
 | ProgressBar(fraction, size?, overlay?, id?) | Render a normalized progress bar |
-| SliderFloat / SliderInt | Render numeric sliders |\n| DragFloat / DragInt | Adjust values by horizontal dragging; accepts speed, optional minimum/maximum, callback, and ID |\n| InputFloat / InputInt | Edit numeric values in a text field; commits on focus loss; config supports ID, Min, Max, Decimals, and Placeholder |
+| SliderFloat / SliderInt | Render numeric sliders |\n| DragFloat / DragInt | Adjust values by horizontal dragging; accepts speed, optional minimum/maximum, callback, and ID |\n| InputFloat / InputInt | Edit numeric values in a text field; commits on focus loss; config supports ID, Min, Max, Decimals, and Placeholder |\n| ColorEdit(label, color, callback?, id?) | Show a clickable color swatch that expands into HSV controls; callback receives a Color3 |\n| ColorPicker(label, color, callback?, id?) | Show a live color swatch and always-visible HSV controls; callback receives a Color3 |
 | InputText(label, value, callback, config?) | Render a text input |
 | Separator(text?) / Spacing() | Layout helpers |
 | PushID(id) / PopID() | Scope widget IDs |
@@ -95,7 +95,7 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 ## Development roadmap
 
 1. Core interaction and lifecycle: frame lifecycle guards, stable widget identity across windows/children, click-to-focus and click-to-front, title hover states, nested scopes, and context cleanup. Initial interaction smoke test: \`examples/Milestone01InteractionTest.client.lua\`.
-2. Widget coverage: core controls and Part A widgets (selectables, combos, collapsing headers, tree nodes, bullet text, images); color editing, tabs, tables, menus, popups, and modal dialogs.
+2. Widget coverage: core controls, Part A selection/tree/display widgets, Part B numeric controls, and Part C color controls; tabs, tables, menus, popups, and modal dialogs remain future widget work.
 3. Layout: groups, columns, table sizing, advanced clipping, item widths, and layout rules.
 4. Interaction: keyboard navigation, focus, shortcuts, gamepad navigation, drag-and-drop.
 5. Drawing: draw lists, primitives, clipping, gradients, images and custom callbacks.
