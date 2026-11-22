@@ -71,6 +71,8 @@ function ImGui.new(config)
         WindowStack = {}, CurrentWindow = nil, CurrentParent = nil, _scope = "", _scopeStack = {},
         FrameNumber = 0, _idStack = {}, _order = 0, _windowOrder = 0, _connections = {}, _callbacks = {},
         _frameActive = false, _destroyed = false, _treeStack = {},
+        _lastItem = nil, _sameLineRow = nil, _sameLineRequested = false,
+        _indentStack = {}, _groupStack = {},
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
 
@@ -117,11 +119,59 @@ function ImGui:_widget(id, className, parent, properties)
     return object
 end
 
+local function measuredItemWidth(object)
+    local width = object.AbsoluteSize.X
+    if object:IsA("TextLabel") then
+        width = math.max(object.TextBounds.X + 2, 1)
+    elseif object:IsA("TextButton") and object.AutomaticSize == Enum.AutomaticSize.X then
+        width = math.max(object.AbsoluteSize.X, object.TextBounds.X + 12)
+    end
+    return math.max(math.floor(width + 0.5), 1)
+end
+
+local function makeHorizontalRow(self, previous)
+    local parent = previous.Parent
+    local order = previous.LayoutOrder
+    local height = math.max(previous.AbsoluteSize.Y, previous.Size.Y.Offset, 1)
+    local row = make("Frame", parent, {
+        Name = "ImGuiSameLineRow", BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, height), LayoutOrder = order,
+    })
+    make("UIListLayout", row, {
+        FillDirection = Enum.FillDirection.Horizontal,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, self.Style.ItemInnerSpacing.X),
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+    })
+    previous.Parent = row
+    previous.Size = UDim2.fromOffset(measuredItemWidth(previous), height)
+    previous.AutomaticSize = Enum.AutomaticSize.None
+    previous.LayoutOrder = 1
+    return row
+end
+
 function ImGui:_add(id, className, properties)
     assert(self._frameActive, "Call NewFrame() before creating widgets")
     assert(self.CurrentParent, "Call Begin() before creating widgets")
     self._order += 1
-    return self:_widget(id, className, self.CurrentParent, properties)
+    local parent = self.CurrentParent
+    local row = self._sameLineRequested and self._sameLineRow or nil
+    if row then
+        parent = row
+    else
+        self._sameLineRow = nil
+    end
+    local object = self:_widget(id, className, parent, properties)
+    if row then
+        local height = math.max(object.AbsoluteSize.Y, object.Size.Y.Offset, 1)
+        object.Size = UDim2.fromOffset(measuredItemWidth(object), height)
+        object.AutomaticSize = Enum.AutomaticSize.None
+        object.LayoutOrder = #row:GetChildren()
+        row.Size = UDim2.new(1, 0, 0, math.max(row.Size.Y.Offset, height))
+    end
+    self._sameLineRequested = false
+    self._lastItem = object
+    return object
 end
 
 function ImGui:NewFrame()
@@ -132,6 +182,8 @@ function ImGui:NewFrame()
     self.WindowStack = {}
     self._scopeStack = {}
     self._treeStack = {}
+    self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
+    self._indentStack, self._groupStack = {}, {}
     self._scope = ""
     self.CurrentWindow, self.CurrentParent = nil, nil
     self._frameActive = true
@@ -1298,9 +1350,86 @@ function ImGui:Separator(text)
     return frame
 end
 
-function ImGui:Spacing()
-    self:_add("Spacing:" .. self._order, "Frame", {
-        Name = "Spacing", Size = UDim2.new(1, 0, 0, self.Style.ItemSpacing.Y), BackgroundTransparency = 1,
+-- Place the next submitted item beside the previously submitted item.
+function ImGui:SameLine()
+    assert(self._frameActive and self.CurrentParent, "SameLine() must be called inside Begin()")
+    assert(self._lastItem and self._lastItem.Parent, "SameLine() requires a preceding item")
+    if not self._sameLineRow then
+        self._sameLineRow = makeHorizontalRow(self, self._lastItem)
+    elseif self._lastItem.Parent ~= self._sameLineRow then
+        self._lastItem.Parent = self._sameLineRow
+        self._lastItem.Size = UDim2.fromOffset(measuredItemWidth(self._lastItem), math.max(self._lastItem.AbsoluteSize.Y, 1))
+        self._lastItem.AutomaticSize = Enum.AutomaticSize.None
+        self._lastItem.LayoutOrder = #self._sameLineRow:GetChildren()
+    end
+    self._sameLineRequested = true
+end
+
+-- Explicitly return subsequent items to the normal vertical flow.
+function ImGui:NewLine()
+    self._sameLineRequested = false
+    self._sameLineRow = nil
+    self._lastItem = nil
+end
+
+function ImGui:Dummy(size)
+    assert(typeof(size) == "UDim2", "Dummy(size) expects a UDim2")
+    return self:_add("Dummy:" .. self._order, "Frame", {
+        Name = "Dummy", Size = size, BackgroundTransparency = 1,
+        BorderSizePixel = 0, Active = false, Selectable = false,
+    })
+end
+
+local function openLayoutScope(self, name, paddingLeft)
+    assert(self._frameActive and self.CurrentParent, name .. "() must be called inside Begin()")
+    local parent = self.CurrentParent
+    self._order += 1
+    local container = self:_widget(name .. ":" .. self._order, "Frame", parent, {
+        Name = "ImGui" .. name, Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
+        BorderSizePixel = 0, LayoutOrder = self._order,
+    })
+    vertical(container, self.Style.ItemSpacing.Y)
+    if paddingLeft and paddingLeft > 0 then
+        make("UIPadding", container, { PaddingLeft = UDim.new(0, paddingLeft) })
+    end
+    table.insert(self._groupStack, { Parent = parent, LastItem = self._lastItem, Kind = name })
+    self.CurrentParent = container
+    self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
+    return container
+end
+
+local function closeLayoutScope(self, name)
+    local scope = self._groupStack[#self._groupStack]
+    assert(scope and scope.Kind == name, name .. "() called without a matching opener")
+    table.remove(self._groupStack)
+    self.CurrentParent = scope.Parent
+    self._lastItem, self._sameLineRow, self._sameLineRequested = scope.LastItem, nil, false
+end
+
+function ImGui:Indent(width)
+    width = tonumber(width) or self.Style.IndentSpacing or 14
+    assert(width >= 0, "Indent(width) expects a non-negative width")
+    openLayoutScope(self, "Indent", width)
+end
+
+function ImGui:Unindent()
+    closeLayoutScope(self, "Indent")
+end
+
+function ImGui:BeginGroup()
+    openLayoutScope(self, "Group", 0)
+end
+
+function ImGui:EndGroup()
+    closeLayoutScope(self, "Group")
+end
+
+function ImGui:Spacing(amount)
+    local height = math.max(0, tonumber(amount) or self.Style.ItemSpacing.Y)
+    return self:_add("Spacing:" .. self._order, "Frame", {
+        Name = "Spacing", Size = UDim2.new(1, 0, 0, height), BackgroundTransparency = 1,
+        BorderSizePixel = 0, Active = false, Selectable = false,
     })
 end
 
@@ -1358,6 +1487,7 @@ function ImGui:Render()
     assert(self._frameActive, "Render() called without NewFrame()")
     assert(#self.WindowStack == 0, "Unclosed Begin()/BeginChild(): call End()/EndChild() before Render()")
     assert(#self._treeStack == 0, "Unclosed TreeNode(): call TreePop() before Render()")
+    assert(#self._groupStack == 0, "Unclosed Indent()/BeginGroup(): close layout scopes before Render()")
     for _, object in pairs(self.Widgets) do
         if object.Parent then object.Visible = object:GetAttribute("ImGuiLastSeen") == self.FrameNumber end
     end
