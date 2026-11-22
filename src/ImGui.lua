@@ -99,6 +99,7 @@ function ImGui:_widget(id, className, parent, properties)
         for property, value in pairs(properties or {}) do (object :: any)[property] = value end
     end
     object.LayoutOrder = self._order
+    object:SetAttribute("ImGuiWidgetKey", key)
     object:SetAttribute("ImGuiLastSeen", self.FrameNumber)
 
     -- Any click on a widget makes its owning window active.
@@ -130,21 +131,23 @@ local function measuredItemWidth(object)
 end
 
 local function makeHorizontalRow(self, previous)
-    local parent = previous.Parent
-    local order = previous.LayoutOrder
-    local height = math.max(previous.AbsoluteSize.Y, previous.Size.Y.Offset, 1)
-    local row = make("Frame", parent, {
+    local parent = self.CurrentParent
+    local itemKey = previous:GetAttribute("ImGuiWidgetKey") or previous.Name
+    local row = self:_widget("SameLineRow:" .. itemKey, "Frame", parent, {
         Name = "ImGuiSameLineRow", BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, height), LayoutOrder = order,
+        BorderSizePixel = 0, Active = false, Size = UDim2.new(1, 0, 0, math.max(previous.AbsoluteSize.Y, previous.Size.Y.Offset, 1)),
     })
-    make("UIListLayout", row, {
-        FillDirection = Enum.FillDirection.Horizontal,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, self.Style.ItemInnerSpacing.X),
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-    })
+    if not row:FindFirstChildOfClass("UIListLayout") then
+        make("UIListLayout", row, {
+            FillDirection = Enum.FillDirection.Horizontal,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, self.Style.ItemInnerSpacing.X),
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+        })
+    end
+    row.LayoutOrder = previous.LayoutOrder
     previous.Parent = row
-    previous.Size = UDim2.fromOffset(measuredItemWidth(previous), height)
+    previous.Size = UDim2.fromOffset(measuredItemWidth(previous), math.max(previous.AbsoluteSize.Y, previous.Size.Y.Offset, 1))
     previous.AutomaticSize = Enum.AutomaticSize.None
     previous.LayoutOrder = 1
     return row
