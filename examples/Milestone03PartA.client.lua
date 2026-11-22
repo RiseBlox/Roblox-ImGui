@@ -7,13 +7,13 @@ local RunService = game:GetService("RunService")
 local ImGui = require(ReplicatedStorage:WaitForChild("ImGui"))
 
 local ui = ImGui.new({ Name = "RobloxImGuiM03PartA", DisplayOrder = 113 })
-local state = { Clicks = 0, Checked = false }
+local state = { Clicks = 0, Checked = false, VerticalClicks = 0 }
 local connection
 local firstFrame = true
 
 local function draw()
     ui:NewFrame()
-    local flags = { Size = UDim2.fromOffset(500, 560) }
+    local flags = { Size = UDim2.fromOffset(550, 560) }
     if firstFrame then
         flags.Position = UDim2.fromOffset(180, 100)
         firstFrame = false
@@ -27,9 +27,10 @@ local function draw()
         ui:Text("Inline button clicks: " .. state.Clicks)
 
         ui:Separator("New line and spacing")
-        ui:Button("First vertical item")
+        ui:Button("First vertical item", { Callback = function() state.VerticalClicks += 1 end })
         ui:NewLine()
-        ui:Button("NewLine resumes vertical flow")
+        ui:Button("NewLine resumes vertical flow", { Callback = function() state.VerticalClicks += 1 end })
+        ui:Text("Vertical button clicks: " .. state.VerticalClicks)
         ui:Spacing(14)
         ui:Text("The previous item is followed by 14 pixels of extra spacing.")
         ui:Dummy(UDim2.fromOffset(80, 18))
