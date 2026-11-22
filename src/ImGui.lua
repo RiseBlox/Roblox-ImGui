@@ -1513,6 +1513,8 @@ function ImGui:Destroy()
     table.clear(self.WindowStack)
     table.clear(self._scopeStack)
     table.clear(self._treeStack)
+    table.clear(self._groupStack)
+    table.clear(self._indentStack)
     table.clear(self._callbacks or {})
     table.clear(self._progressBars or {})
  
