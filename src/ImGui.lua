@@ -1168,8 +1168,8 @@ function ImGui:Separator(text)
     })
     local leftInset = 0
     local rightInset = 2
-    local labelGap = 8
-    local leftLineWidth = 8
+    local labelGap = 5
+    local leftLineWidth = 12
     local lineY = hasText and 11 or 4
 
     if not hasText then
