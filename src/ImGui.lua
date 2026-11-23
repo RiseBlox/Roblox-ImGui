@@ -928,6 +928,22 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     })
     track.ClipsDescendants = true
     if not track:FindFirstChildOfClass("UICorner") then round(track, self.Style.FrameRounding) end
+
+    local fill = track:FindFirstChild("Fill") or make("Frame", track, {
+        Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
+    })
+    if not fill:FindFirstChildOfClass("UICorner") then round(fill, self.Style.FrameRounding) end
+    local valueText = track:FindFirstChild("Value") or make("TextLabel", track, {
+        Name = "Value", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
+        TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = track.ZIndex + 2,
+    })
+    local grab = track:FindFirstChild("Grab") or make("Frame", track, {
+        Name = "Grab", AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.fromOffset(self.Style.GrabMinSize, 18), BackgroundColor3 = self.Style.SliderGrab,
+        BorderSizePixel = 0, ZIndex = track.ZIndex + 1,
+    })
     if track:GetAttribute("ImGuiHoverConnected") ~= true then
         track:SetAttribute("ImGuiHoverConnected", true)
         track:SetAttribute("ImGuiHovered", false)
@@ -964,21 +980,6 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
             end
         end))
     end
-    local fill = track:FindFirstChild("Fill") or make("Frame", track, {
-        Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
-    })
-    if not fill:FindFirstChildOfClass("UICorner") then round(fill, self.Style.FrameRounding) end
-    local valueText = track:FindFirstChild("Value") or make("TextLabel", track, {
-        Name = "Value", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-        Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
-        TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = track.ZIndex + 2,
-    })
-    local grab = track:FindFirstChild("Grab") or make("Frame", track, {
-        Name = "Grab", AnchorPoint = Vector2.new(0.5, 0.5),
-        Size = UDim2.fromOffset(self.Style.GrabMinSize, 18), BackgroundColor3 = self.Style.SliderGrab,
-        BorderSizePixel = 0, ZIndex = track.ZIndex + 1,
-    })
     local function positionGrab(alpha)
         grab.Position = UDim2.new(math.clamp(alpha, 0, 1), 0, 0.5, 0)
     end
