@@ -484,6 +484,7 @@ end
 function ImGui:Button(label, config)
     config = config or {}
     local key = config.ID or ("Button:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local button = self:_add(key, "TextButton", {
         Name = "Button", Size = config.Size or UDim2.new(0, 0, 0, 24),
         AutomaticSize = config.Size and Enum.AutomaticSize.None or Enum.AutomaticSize.X,
@@ -546,13 +547,13 @@ function ImGui:Button(label, config)
         end)
         self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local callback = self._callbacks and self._callbacks[self:_callbackKey(key)]
+            local callback = self._callbacks and self._callbacks[callbackKey]
             if callback then callback() end
         end)
     end
 
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = config.Callback
+    self._callbacks[callbackKey] = config.Callback
     -- _widget reapplies its property table every frame. Reassert the state
     -- after that reset so hover and active feedback remains visible.
     refreshButtonVisual()
@@ -561,6 +562,7 @@ end
 
 function ImGui:Checkbox(label, value, callback, id)
     local key = id or ("Checkbox:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local button = self:_add(key, "TextButton", {
         Name = "Checkbox", Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1,
         BorderSizePixel = 0, AutoButtonColor = false, Font = self.Style.Font,
@@ -586,7 +588,7 @@ function ImGui:Checkbox(label, value, callback, id)
     check.Visible = value == true
     button:SetAttribute("ImGuiValue", value == true)
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
         self:_connect(button.Activated, function()
@@ -594,7 +596,7 @@ function ImGui:Checkbox(label, value, callback, id)
             local nextValue = not (button:GetAttribute("ImGuiValue") == true)
             button:SetAttribute("ImGuiValue", nextValue)
             check.Visible = nextValue
-            local fn = self._callbacks[self:_callbackKey(key)]
+            local fn = self._callbacks[callbackKey]
             if fn then fn(nextValue) end
         end)
     end
@@ -605,6 +607,7 @@ end
 -- Roblox's retained input events are exposed through a callback.
 function ImGui:RadioButton(label, active, callback, id)
     local key = id or ("RadioButton:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local button = self:_add(key, "TextButton", {
         Name = "RadioButton", Size = UDim2.new(1, 0, 0, 20),
         BackgroundTransparency = 1, BorderSizePixel = 0,
@@ -637,12 +640,12 @@ function ImGui:RadioButton(label, active, callback, id)
         self:_connect(button.MouseLeave, function() button.BackgroundTransparency = 1 end)
     end
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
         self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local fn = self._callbacks[self:_callbackKey(key)]
+            local fn = self._callbacks[callbackKey]
             if fn then fn() end
         end)
     end
@@ -654,6 +657,7 @@ end
 -- Selectable: row selection with optional selected state and callback.
 function ImGui:Selectable(label, selected, callback, id)
     local key = id or ("Selectable:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local button = self:_add(key, "TextButton", {
         Name = "Selectable", Size = UDim2.new(1, 0, 0, 20),
         BackgroundColor3 = selected and self.Style.HeaderActive or self.Style.Header,
@@ -674,7 +678,7 @@ function ImGui:Selectable(label, selected, callback, id)
         end)
         self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
+            local fn = self._callbacks and self._callbacks[callbackKey]
             if fn then fn(not (button:GetAttribute("ImGuiSelected") == true)) end
         end)
     end
@@ -682,13 +686,14 @@ function ImGui:Selectable(label, selected, callback, id)
     button.BackgroundColor3 = selected and self.Style.HeaderActive or self.Style.Header
     button.BackgroundTransparency = selected and 0.35 or 1
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     return selected == true
 end
 
 -- Combo uses a Roblox-native popup list. selected is a 1-based index or an item string.
 function ImGui:Combo(label, selected, items, callback, id)
     local key = id or ("Combo:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     items = items or {}
     local selectedIndex = type(selected) == "number" and math.floor(selected) or table.find(items, selected)
     selectedIndex = math.clamp(selectedIndex or 1, 1, math.max(#items, 1))
@@ -744,7 +749,7 @@ function ImGui:Combo(label, selected, items, callback, id)
                 frame:SetAttribute("ImGuiComboIndex", selected)
                 choice.Text = "  " .. tostring(items[selected] or "")
                 popup.Visible = false
-                local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
+                local fn = self._callbacks and self._callbacks[callbackKey]
                 if fn then fn(selected, items[selected]) end
             end)
         end
@@ -776,7 +781,7 @@ function ImGui:Combo(label, selected, items, callback, id)
     end
     frame:SetAttribute("ImGuiComboIndex", selectedIndex)
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     return selectedIndex
 end
 
@@ -954,6 +959,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     assert(maxValue > minValue, "SliderFloat maxValue must be greater than minValue")
     local itemWidth, availableWidth = self:_consumeItemWidth(0.64)
     local key = id or ("Slider:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local frame = self:_add(key, "Frame", {
         Name = "Slider", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1,
     })
@@ -1027,7 +1033,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         -- Keep a single movable grab visible across the entire range.
         positionGrab(alpha)
         valueText.Text = string.format("%.3f", nextValue)
-        local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
+        local fn = self._callbacks and self._callbacks[callbackKey]
         if fn then fn(nextValue) end
     end
     value = math.clamp(tonumber(value) or minValue, minValue, maxValue)
@@ -1036,7 +1042,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     positionGrab(initialAlpha)
     valueText.Text = string.format("%.3f", value)
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     refreshSliderVisual()
     if track:GetAttribute("ImGuiSliderConnected") ~= true then
         track:SetAttribute("ImGuiSliderConnected", true)
@@ -1079,6 +1085,7 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
     if maxValue then value = math.min(value, maxValue) end
     local itemWidth, availableWidth = self:_consumeItemWidth(0.62)
     local key = id or ("DragFloat:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local frame = self:_add(key, "Frame", {Name = "DragFloat", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1})
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
         Name = "Label", Size = UDim2.new(0.36, 0, 1, 0), BackgroundTransparency = 1,
@@ -1129,7 +1136,7 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
     drag:SetAttribute("ImGuiDragMin", minValue)
     drag:SetAttribute("ImGuiDragMax", maxValue)
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     if drag:GetAttribute("ImGuiDragConnected") ~= true then
         drag:SetAttribute("ImGuiDragConnected", true)
         local ownerWindow = self.CurrentWindow
@@ -1159,7 +1166,7 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
                 fillAlpha = math.clamp((nextValue - low) / (high - low), 0, 1)
             end
             dragFill.Size = UDim2.new(fillAlpha, 0, 1, 0)
-            local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
+            local fn = self._callbacks and self._callbacks[callbackKey]
             if fn then fn(nextValue) end
         end
         self:_connect(drag.InputBegan, function(input)
@@ -1200,6 +1207,7 @@ end
 local function numericInput(self, label, value, callback, config, integer)
     config = config or {}
     local key = config.ID or ((integer and "InputInt:" or "InputFloat:") .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local minValue, maxValue = tonumber(config.Min), tonumber(config.Max)
     assert(not (minValue and maxValue) or maxValue >= minValue, "Numeric input Min must not exceed Max")
     local function normalize(candidate)
@@ -1238,7 +1246,7 @@ local function numericInput(self, label, value, callback, config, integer)
         input.Text = integer and tostring(value) or string.format("%." .. tostring(decimals) .. "f", value)
     end
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     if input:GetAttribute("ImGuiNumericConnected") ~= true then
         input:SetAttribute("ImGuiNumericConnected", true)
         self:_connect(input.Focused, function() input.BackgroundColor3 = self.Style.FrameBgActive end)
@@ -1252,7 +1260,7 @@ local function numericInput(self, label, value, callback, config, integer)
             end
             input:SetAttribute("ImGuiNumericValue", nextValue)
             input.Text = integer and tostring(nextValue) or string.format("%." .. tostring(decimals) .. "f", nextValue)
-            local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
+            local fn = self._callbacks and self._callbacks[callbackKey]
             if fn then fn(nextValue) end
         end)
     end
@@ -1331,6 +1339,7 @@ function ImGui:InputText(label, value, callback, config)
     config = config or {}
     local itemWidth = self:_consumeItemWidth(0.64)
     local key = config.ID or ("Input:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local frame = self:_add(key, "Frame", {
         Name = "InputText", Size = UDim2.new(1, 0, 0, config.Multiline and 58 or 26),
         BackgroundTransparency = 1,
@@ -1366,12 +1375,12 @@ function ImGui:InputText(label, value, callback, config)
     if input:GetAttribute("ImGuiTextConnected") ~= true then
         input:SetAttribute("ImGuiTextConnected", true)
         self:_connect(input:GetPropertyChangedSignal("Text"), function()
-            local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
+            local fn = self._callbacks and self._callbacks[callbackKey]
             if fn then fn(input.Text) end
         end)
     end
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     return input.Text
 end
 
@@ -1435,9 +1444,10 @@ end
 -- Compact color editor. Clicking the swatch expands HSV controls beneath it.
 function ImGui:ColorEdit(label, color, callback, id)
     local key = id or ("ColorEdit:" .. tostring(label))
+    local callbackKey = self:_callbackKey(key)
     local frame = colorPreviewRow(self, label, color, key, true)
     self._callbacks = self._callbacks or {}
-    self._callbacks[self:_callbackKey(key)] = callback
+    self._callbacks[callbackKey] = callback
     if frame:GetAttribute("ImGuiColorOpen") == true then
         submitColorChannels(self, key, color, callback)
     end
