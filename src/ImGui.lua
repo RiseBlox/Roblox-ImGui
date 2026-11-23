@@ -472,26 +472,47 @@ function ImGui:Button(label, config)
     if not button:FindFirstChildOfClass("UICorner") then round(button, self.Style.FrameRounding) end
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
-        button.MouseEnter:Connect(function()
-            button.BackgroundColor3 = self.Style.ButtonHovered
-            button.BackgroundTransparency = 0
-        end)
-        button.MouseLeave:Connect(function()
-            button.BackgroundColor3 = self.Style.Button
-            button.BackgroundTransparency = 0.12
-        end)
-        button.MouseButton1Down:Connect(function() button.BackgroundColor3 = self.Style.ButtonActive end)
-        button.MouseButton1Up:Connect(function()
-            if button:IsDescendantOf(self.ScreenGui) then
+        button:SetAttribute("ImGuiHovered", false)
+        button:SetAttribute("ImGuiPressed", false)
+        local function refreshButtonVisual()
+            local pressed = button:GetAttribute("ImGuiPressed") == true
+            local hovered = button:GetAttribute("ImGuiHovered") == true
+            if pressed then
+                button.BackgroundColor3 = self.Style.ButtonActive
+                button.BackgroundTransparency = 0
+                button.TextColor3 = self.Style.Text
+            elseif hovered then
                 button.BackgroundColor3 = self.Style.ButtonHovered
                 button.BackgroundTransparency = 0
+                button.TextColor3 = self.Style.Text
+            else
+                button.BackgroundColor3 = self.Style.Button
+                button.BackgroundTransparency = 0.12
+                button.TextColor3 = self.Style.Text
             end
-        end)
-        button.Activated:Connect(function()
+        end
+        table.insert(self._connections, button.MouseEnter:Connect(function()
+            button:SetAttribute("ImGuiHovered", true)
+            refreshButtonVisual()
+        end))
+        table.insert(self._connections, button.MouseLeave:Connect(function()
+            button:SetAttribute("ImGuiHovered", false)
+            button:SetAttribute("ImGuiPressed", false)
+            refreshButtonVisual()
+        end))
+        table.insert(self._connections, button.MouseButton1Down:Connect(function()
+            button:SetAttribute("ImGuiPressed", true)
+            refreshButtonVisual()
+        end))
+        table.insert(self._connections, button.MouseButton1Up:Connect(function()
+            button:SetAttribute("ImGuiPressed", false)
+            refreshButtonVisual()
+        end))
+        table.insert(self._connections, button.Activated:Connect(function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local callback = self._callbacks and self._callbacks[config.ID or ("Button:" .. tostring(label))]
             if callback then callback() end
-        end)
+        end))
     end
     self._callbacks = self._callbacks or {}
     self._callbacks[config.ID or ("Button:" .. tostring(label))] = config.Callback
@@ -909,8 +930,39 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     if not track:FindFirstChildOfClass("UICorner") then round(track, self.Style.FrameRounding) end
     if track:GetAttribute("ImGuiHoverConnected") ~= true then
         track:SetAttribute("ImGuiHoverConnected", true)
-        track.MouseEnter:Connect(function() track.BackgroundColor3 = self.Style.FrameBgHovered end)
-        track.MouseLeave:Connect(function() track.BackgroundColor3 = self.Style.FrameBg end)
+        track:SetAttribute("ImGuiHovered", false)
+        track:SetAttribute("ImGuiPressed", false)
+        local function refreshSliderVisual()
+            local pressed = track:GetAttribute("ImGuiPressed") == true
+            local hovered = track:GetAttribute("ImGuiHovered") == true
+            track.BackgroundColor3 = pressed and self.Style.FrameBgActive
+                or hovered and self.Style.FrameBgHovered or self.Style.FrameBg
+            track.BackgroundTransparency = pressed and 0 or hovered and 0.08 or self.Style.FrameBgTransparency
+            grab.BackgroundColor3 = pressed and self.Style.ButtonHovered or self.Style.SliderGrab
+            local grabWidth = pressed and 14 or hovered and 12 or self.Style.GrabMinSize
+            grab.Size = UDim2.fromOffset(grabWidth, 18)
+            fill.BackgroundTransparency = 0
+        end
+        table.insert(self._connections, track.MouseEnter:Connect(function()
+            track:SetAttribute("ImGuiHovered", true)
+            refreshSliderVisual()
+        end))
+        table.insert(self._connections, track.MouseLeave:Connect(function()
+            track:SetAttribute("ImGuiHovered", false)
+            if track:GetAttribute("ImGuiPressed") ~= true then refreshSliderVisual() end
+        end))
+        table.insert(self._connections, track.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                track:SetAttribute("ImGuiPressed", true)
+                refreshSliderVisual()
+            end
+        end))
+        table.insert(self._connections, track.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                track:SetAttribute("ImGuiPressed", false)
+                refreshSliderVisual()
+            end
+        end))
     end
     local fill = track:FindFirstChild("Fill") or make("Frame", track, {
         Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
