@@ -86,6 +86,14 @@ function ImGui:GetID(id)
     return (prefix ~= "" and prefix .. "/" or "") .. tostring(id)
 end
 
+-- Centralized connection ownership. Every event listener created by this context is
+-- registered here so Destroy() can disconnect it, including global input listeners.
+function ImGui:_connect(signal, callback)
+    local connection = signal:Connect(callback)
+    table.insert(self._connections, connection)
+    return connection
+end
+
 function ImGui:_widget(id, className, parent, properties)
     local localKey = self:GetID(id)
     local key = (self._scope ~= "" and self._scope .. "/" or "") .. localKey
@@ -109,7 +117,7 @@ function ImGui:_widget(id, className, parent, properties)
         local function activateOwner()
             if currentWindow and currentWindow.Focus then currentWindow.Focus() end
         end
-        table.insert(self._connections, object.InputBegan:Connect(function(input)
+        table.insert(self._connections, self:_connect(object.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
                 local accepted = currentWindow and currentWindow.Focus and currentWindow.Focus(input.Position) == true
@@ -264,13 +272,13 @@ function ImGui:_getWindow(name, flags)
         end
         return true
     end
-    title.MouseEnter:Connect(function()
+    self:_connect(title.MouseEnter, function()
         if self._focusedWindowName ~= name then title.BackgroundColor3 = style.TitleBgHovered end
     end)
-    title.MouseLeave:Connect(function()
+    self:_connect(title.MouseLeave, function()
         if self._focusedWindowName ~= name then title.BackgroundColor3 = style.TitleBg end
     end)
-    table.insert(self._connections, title.InputBegan:Connect(function(input)
+    table.insert(self._connections, self:_connect(title.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
             focusWindow(input.Position)
@@ -278,19 +286,19 @@ function ImGui:_getWindow(name, flags)
     end))
 
     local dragOrigin, startPosition
-    table.insert(self._connections, title.InputBegan:Connect(function(input)
+    table.insert(self._connections, self:_connect(title.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             if focusWindow(input.Position) ~= true then return end
             dragOrigin, startPosition = input.Position, root.Position
         end
     end))
-    table.insert(self._connections, UserInputService.InputChanged:Connect(function(input)
+    table.insert(self._connections, self:_connect(UserInputService.InputChanged, function(input)
         if not dragOrigin or not startPosition then return end
         if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
         local delta = input.Position - dragOrigin
         root.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
     end))
-    table.insert(self._connections, UserInputService.InputEnded:Connect(function(input)
+    table.insert(self._connections, self:_connect(UserInputService.InputEnded, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragOrigin, startPosition = nil, nil
         end
@@ -302,8 +310,8 @@ function ImGui:_getWindow(name, flags)
             focusWindow(input.Position)
         end
     end
-    table.insert(self._connections, root.InputBegan:Connect(focusOnPointer))
-    table.insert(self._connections, content.InputBegan:Connect(focusOnPointer))
+    table.insert(self._connections, self:_connect(root.InputBegan, focusOnPointer))
+    table.insert(self._connections, self:_connect(content.InputBegan, focusOnPointer))
     window = { Name = name, Root = root, Title = title, Content = content, Visible = true, Focus = focusWindow, FocusOrder = self._windowOrder }
     self.Windows[name] = window
     return window
@@ -497,29 +505,29 @@ function ImGui:Button(label, config)
         button:SetAttribute("ImGuiHovered", false)
         button:SetAttribute("ImGuiPressed", false)
 
-        table.insert(self._connections, button.MouseEnter:Connect(function()
+        table.insert(self._connections, self:_connect(button.MouseEnter, function()
             button:SetAttribute("ImGuiHovered", true)
             refreshButtonVisual()
         end))
-        table.insert(self._connections, button.MouseLeave:Connect(function()
+        table.insert(self._connections, self:_connect(button.MouseLeave, function()
             button:SetAttribute("ImGuiHovered", false)
             refreshButtonVisual()
         end))
-        table.insert(self._connections, button.InputBegan:Connect(function(input)
+        table.insert(self._connections, self:_connect(button.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
                 button:SetAttribute("ImGuiPressed", true)
                 refreshButtonVisual()
             end
         end))
-        table.insert(self._connections, UserInputService.InputEnded:Connect(function(input)
+        table.insert(self._connections, self:_connect(UserInputService.InputEnded, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
                 button:SetAttribute("ImGuiPressed", false)
                 refreshButtonVisual()
             end
         end))
-        table.insert(self._connections, button.Activated:Connect(function()
+        table.insert(self._connections, self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local callback = self._callbacks and self._callbacks[key]
             if callback then callback() end
@@ -555,8 +563,8 @@ function ImGui:Checkbox(label, value, callback, id)
     button.Text = "     " .. tostring(label)
     if button:GetAttribute("ImGuiHoverConnected") ~= true then
         button:SetAttribute("ImGuiHoverConnected", true)
-        button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
-        button.MouseLeave:Connect(function() button.BackgroundTransparency = 1 end)
+        self:_connect(button.MouseEnter, function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
+        self:_connect(button.MouseLeave, function() button.BackgroundTransparency = 1 end)
     end
     check.Visible = value == true
     button:SetAttribute("ImGuiValue", value == true)
@@ -564,7 +572,7 @@ function ImGui:Checkbox(label, value, callback, id)
     self._callbacks[key] = callback
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
-        button.Activated:Connect(function()
+        self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local nextValue = not (button:GetAttribute("ImGuiValue") == true)
             button:SetAttribute("ImGuiValue", nextValue)
@@ -608,14 +616,14 @@ function ImGui:RadioButton(label, active, callback, id)
     button.Text = "     " .. tostring(label)
     if button:GetAttribute("ImGuiHoverConnected") ~= true then
         button:SetAttribute("ImGuiHoverConnected", true)
-        button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
-        button.MouseLeave:Connect(function() button.BackgroundTransparency = 1 end)
+        self:_connect(button.MouseEnter, function() button.BackgroundColor3 = self.Style.HeaderHovered; button.BackgroundTransparency = 0.75 end)
+        self:_connect(button.MouseLeave, function() button.BackgroundTransparency = 1 end)
     end
     self._callbacks = self._callbacks or {}
     self._callbacks[key] = callback
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
-        button.Activated:Connect(function()
+        self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local fn = self._callbacks[key]
             if fn then fn() end
@@ -639,15 +647,15 @@ function ImGui:Selectable(label, selected, callback, id)
     })
     if button:GetAttribute("ImGuiSelectableConnected") ~= true then
         button:SetAttribute("ImGuiSelectableConnected", true)
-        button.MouseEnter:Connect(function()
+        self:_connect(button.MouseEnter, function()
             button.BackgroundColor3 = self.Style.HeaderHovered
             button.BackgroundTransparency = 0.35
         end)
-        button.MouseLeave:Connect(function()
+        self:_connect(button.MouseLeave, function()
             button.BackgroundColor3 = button:GetAttribute("ImGuiSelected") and self.Style.HeaderActive or self.Style.Header
             button.BackgroundTransparency = button:GetAttribute("ImGuiSelected") and 0.35 or 1
         end)
-        button.Activated:Connect(function()
+        self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local fn = self._callbacks and self._callbacks[key]
             if fn then fn(not (button:GetAttribute("ImGuiSelected") == true)) end
@@ -709,11 +717,11 @@ function ImGui:Combo(label, selected, items, callback, id)
         option.BackgroundColor3 = index == selectedIndex and self.Style.HeaderActive or self.Style.PopupBg
         if option:GetAttribute("ImGuiOptionConnected") ~= true then
             option:SetAttribute("ImGuiOptionConnected", true)
-            option.MouseEnter:Connect(function() option.BackgroundColor3 = self.Style.HeaderHovered end)
-            option.MouseLeave:Connect(function()
+            self:_connect(option.MouseEnter, function() option.BackgroundColor3 = self.Style.HeaderHovered end)
+            self:_connect(option.MouseLeave, function()
                 option.BackgroundColor3 = option:GetAttribute("ImGuiChosen") and self.Style.HeaderActive or self.Style.PopupBg
             end)
-            option.Activated:Connect(function()
+            self:_connect(option.Activated, function()
                 if option:GetAttribute("ImGuiInputAllowed") ~= true then return end
                 local selected = option:GetAttribute("ImGuiOptionIndex")
                 frame:SetAttribute("ImGuiComboIndex", selected)
@@ -733,7 +741,7 @@ function ImGui:Combo(label, selected, items, callback, id)
     local function bindComboInput(target)
         if target:GetAttribute("ImGuiComboInputBound") == true then return end
         target:SetAttribute("ImGuiComboInputBound", true)
-        target.InputBegan:Connect(function(input)
+        self:_connect(target.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
                 target:SetAttribute("ImGuiInputAllowed", allowed == true)
@@ -744,7 +752,7 @@ function ImGui:Combo(label, selected, items, callback, id)
     for _, option in ipairs(popup:GetChildren()) do if option:IsA("TextButton") then bindComboInput(option) end end
     if choice:GetAttribute("ImGuiComboConnected") ~= true then
         choice:SetAttribute("ImGuiComboConnected", true)
-        choice.Activated:Connect(function()
+        self:_connect(choice.Activated, function()
             if choice:GetAttribute("ImGuiInputAllowed") ~= true then return end
             popup.Visible = not popup.Visible
         end)
@@ -769,9 +777,9 @@ function ImGui:CollapsingHeader(label, id)
     })
     if button:GetAttribute("ImGuiHeaderConnected") ~= true then
         button:SetAttribute("ImGuiHeaderConnected", true)
-        button.MouseEnter:Connect(function() button.BackgroundColor3 = self.Style.HeaderHovered end)
-        button.MouseLeave:Connect(function() button.BackgroundColor3 = self.Style.Header end)
-        button.Activated:Connect(function()
+        self:_connect(button.MouseEnter, function() button.BackgroundColor3 = self.Style.HeaderHovered end)
+        self:_connect(button.MouseLeave, function() button.BackgroundColor3 = self.Style.Header end)
+        self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local nextOpen = not (self._treeState and self._treeState[key] == true)
             self._treeState[key] = nextOpen
@@ -796,7 +804,7 @@ function ImGui:TreeNode(label, id)
     })
     if button:GetAttribute("ImGuiTreeConnected") ~= true then
         button:SetAttribute("ImGuiTreeConnected", true)
-        button.Activated:Connect(function()
+        self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local nextOpen = not (self._treeState and self._treeState[key] == true)
             self._treeState[key] = nextOpen
@@ -963,18 +971,18 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         track:SetAttribute("ImGuiHoverConnected", true)
         track:SetAttribute("ImGuiHovered", false)
         track:SetAttribute("ImGuiPressed", false)
-        table.insert(self._connections, track.MouseEnter:Connect(function()
+        table.insert(self._connections, self:_connect(track.MouseEnter, function()
             track:SetAttribute("ImGuiHovered", true)
         end))
-        table.insert(self._connections, track.MouseLeave:Connect(function()
+        table.insert(self._connections, self:_connect(track.MouseLeave, function()
             track:SetAttribute("ImGuiHovered", false)
         end))
-        table.insert(self._connections, track.InputBegan:Connect(function(input)
+        table.insert(self._connections, self:_connect(track.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 track:SetAttribute("ImGuiPressed", true)
             end
         end))
-        table.insert(self._connections, UserInputService.InputEnded:Connect(function(input)
+        table.insert(self._connections, self:_connect(UserInputService.InputEnded, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 track:SetAttribute("ImGuiPressed", false)
             end
@@ -1015,7 +1023,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         track:SetAttribute("ImGuiSliderConnected", true)
         local dragging = false
         local ownerWindow = self.CurrentWindow
-        track.InputBegan:Connect(function(input)
+        self:_connect(track.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
                 track:SetAttribute("ImGuiInputAllowed", allowed == true)
@@ -1024,10 +1032,10 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
                 update(input)
             end
         end)
-        track.InputEnded:Connect(function(input)
+        self:_connect(track.InputEnded, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
         end)
-        table.insert(self._connections, UserInputService.InputChanged:Connect(function(input)
+        table.insert(self._connections, self:_connect(UserInputService.InputChanged, function(input)
             if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then update(input) end
         end))
     end
@@ -1135,7 +1143,7 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
             local fn = self._callbacks and self._callbacks[key]
             if fn then fn(nextValue) end
         end
-        drag.InputBegan:Connect(function(input)
+        self:_connect(drag.InputBegan, function(input)
             if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
             local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
             drag:SetAttribute("ImGuiInputAllowed", allowed == true)
@@ -1145,21 +1153,21 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
                 applyDelta(0, input.Position.X)
             end
         end)
-        drag.InputEnded:Connect(function(input)
+        self:_connect(drag.InputEnded, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging, lastX = false, nil
                 drag:SetAttribute("ImGuiIsDragging", false)
             end
         end)
-        table.insert(self._connections, UserInputService.InputChanged:Connect(function(input)
+        table.insert(self._connections, self:_connect(UserInputService.InputChanged, function(input)
             if not dragging or lastX == nil then return end
             if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
             local nextX = input.Position.X
             applyDelta(nextX - lastX, nextX)
             lastX = nextX
         end))
-        drag.MouseEnter:Connect(function() drag.BackgroundColor3 = self.Style.FrameBgHovered end)
-        drag.MouseLeave:Connect(function() drag.BackgroundColor3 = self.Style.FrameBg end)
+        self:_connect(drag.MouseEnter, function() drag.BackgroundColor3 = self.Style.FrameBgHovered end)
+        self:_connect(drag.MouseLeave, function() drag.BackgroundColor3 = self.Style.FrameBg end)
     end
     return value
 end
@@ -1214,8 +1222,8 @@ local function numericInput(self, label, value, callback, config, integer)
     self._callbacks[key] = callback
     if input:GetAttribute("ImGuiNumericConnected") ~= true then
         input:SetAttribute("ImGuiNumericConnected", true)
-        input.Focused:Connect(function() input.BackgroundColor3 = self.Style.FrameBgActive end)
-        input.FocusLost:Connect(function()
+        self:_connect(input.Focused, function() input.BackgroundColor3 = self.Style.FrameBgActive end)
+        self:_connect(input.FocusLost, function()
             input.BackgroundColor3 = self.Style.FrameBg
             local nextValue = normalize(input.Text)
             if nextValue == nil then
@@ -1331,8 +1339,8 @@ function ImGui:InputText(label, value, callback, config)
     input.TextXAlignment = Enum.TextXAlignment.Left
     if input:GetAttribute("ImGuiFocusConnected") ~= true then
         input:SetAttribute("ImGuiFocusConnected", true)
-        input.Focused:Connect(function() input.BackgroundColor3 = self.Style.FrameBgActive end)
-        input.FocusLost:Connect(function() input.BackgroundColor3 = self.Style.FrameBg end)
+        self:_connect(input.Focused, function() input.BackgroundColor3 = self.Style.FrameBgActive end)
+        self:_connect(input.FocusLost, function() input.BackgroundColor3 = self.Style.FrameBg end)
     end
     input.MultiLine = config.Multiline == true
     if not input:IsFocused() then input.Text = tostring(value or "") end
@@ -1378,13 +1386,13 @@ local function colorPreviewRow(self, label, color, key, toggle)
     if toggle and swatch:GetAttribute("ImGuiColorToggleConnected") ~= true then
         swatch:SetAttribute("ImGuiColorToggleConnected", true)
         local ownerWindow = self.CurrentWindow
-        swatch.InputBegan:Connect(function(input)
+        self:_connect(swatch.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 local allowed = ownerWindow and ownerWindow.Focus and ownerWindow.Focus(input.Position) == true
                 swatch:SetAttribute("ImGuiInputAllowed", allowed == true)
             end
         end)
-        swatch.Activated:Connect(function()
+        self:_connect(swatch.Activated, function()
             if swatch:GetAttribute("ImGuiInputAllowed") ~= true then return end
             frame:SetAttribute("ImGuiColorOpen", frame:GetAttribute("ImGuiColorOpen") ~= true)
         end)
