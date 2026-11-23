@@ -1615,7 +1615,9 @@ local function columnAvailableWidth(columns)
     if width <= 0 then
         width = columns.Parent.AbsoluteSize.X
         local padding = columns.Parent:FindFirstChildOfClass("UIPadding")
-        if padding then width -= padding.PaddingLeft.Offset + padding.PaddingRight.Offset end
+        if padding then
+            width -= padding.PaddingLeft.Offset + padding.PaddingRight.Offset
+        end
     end
     return math.max(width, 1)
 end
@@ -1648,7 +1650,9 @@ local function refreshColumnWidths(self, columns)
     for index, border in ipairs(columns.Borders) do
         boundary += widths[index]
         border.Position = UDim2.fromOffset(math.floor(boundary - 1), 0)
-        border.Size = UDim2.fromOffset(1, math.max(columns.Content.AbsoluteSize.Y, 1))
+        -- Scale to the container's final auto-sized height; an offset sampled
+        -- during submission can be stale before Roblox completes layout.
+        border.Size = UDim2.new(0, 1, 1, 0)
     end
 end
 
@@ -1657,8 +1661,11 @@ function ImGui:Columns(count, id, border)
     count = math.floor(tonumber(count) or 1)
     assert(count >= 1 and count <= 64, "Columns(count) expects a count between 1 and 64")
     assert(#self._columnsStack == 0, "Nested Columns() scopes are not supported")
+
     local key = tostring(id or ("Columns:" .. tostring(self._order + 1)))
     local parent, previousLastItem = self.CurrentParent, self._lastItem
+    local parentScope = self._scope
+    local scopedKey = (parentScope ~= "" and parentScope .. "/" or "") .. key
     local container = self:_add("Columns:" .. key, "Frame", {
         Name = "ImGuiColumns", Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
@@ -1676,10 +1683,14 @@ function ImGui:Columns(count, id, border)
             VerticalAlignment = Enum.VerticalAlignment.Top,
         })
     end
-    local widths = self._columnWidths[key] or {}
-    self._columnWidths[key] = widths
+
+    -- Width state is scoped just like widget identity: two windows or child
+    -- regions using the same Columns ID must not overwrite one another.
+    local widths = self._columnWidths[scopedKey] or {}
+    self._columnWidths[scopedKey] = widths
     local columns = {
-        Key = key, Count = count, Index = 1, Parent = parent, Container = container, Content = content,
+        Key = key, ScopedKey = scopedKey, ParentScope = parentScope,
+        Count = count, Index = 1, Parent = parent, Container = container, Content = content,
         Frames = {}, Borders = {}, Widths = widths, PreviousLastItem = previousLastItem,
         PreviousOrder = self._order - 1, Border = border ~= false,
     }
@@ -1689,7 +1700,9 @@ function ImGui:Columns(count, id, border)
             AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
             LayoutOrder = index,
         })
-        if not column:FindFirstChildOfClass("UIListLayout") then vertical(column, self.Style.ItemSpacing.Y) end
+        if not column:FindFirstChildOfClass("UIListLayout") then
+            vertical(column, self.Style.ItemSpacing.Y)
+        end
         columns.Frames[index] = column
         if columns.Border and index < count then
             local line = self:_widget("Columns:" .. key .. ":Border:" .. index, "Frame", container, {
@@ -1699,18 +1712,22 @@ function ImGui:Columns(count, id, border)
             columns.Borders[index] = line
         end
     end
+
     table.insert(self._columnsStack, columns)
     refreshColumnWidths(self, columns)
     self.CurrentParent = columns.Frames[1]
+    self._scope = scopedKey .. "/Column:0"
     self._order = 0
     self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
 end
 
 function ImGui:NextColumn()
+    assert(self._frameActive, "NextColumn() must be called between NewFrame() and Render()")
     local columns = self._columnsStack[#self._columnsStack]
     assert(columns, "NextColumn() called outside Columns()")
     columns.Index = columns.Index % columns.Count + 1
     self.CurrentParent = columns.Frames[columns.Index]
+    self._scope = columns.ScopedKey .. "/Column:" .. tostring(columns.Index - 1)
     self._order = 0
     self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
 end
@@ -1735,6 +1752,7 @@ function ImGui:GetColumnWidth(columnIndex)
 end
 
 function ImGui:SetColumnWidth(columnIndex, width)
+    assert(self._frameActive, "SetColumnWidth() must be called between NewFrame() and Render()")
     local columns = self._columnsStack[#self._columnsStack]
     assert(columns, "SetColumnWidth() called outside Columns()")
     local index = math.floor(tonumber(columnIndex) or -1)
@@ -1749,9 +1767,11 @@ function ImGui:SetColumnWidth(columnIndex, width)
 end
 
 function ImGui:EndColumns()
+    assert(self._frameActive, "EndColumns() must be called between NewFrame() and Render()")
     local columns = table.remove(self._columnsStack)
     assert(columns, "EndColumns() called without a matching Columns()")
     self.CurrentParent = columns.Parent
+    self._scope = columns.ParentScope
     self._order = columns.PreviousOrder + 1
     self._lastItem, self._sameLineRow, self._sameLineRequested = columns.Container, nil, false
 end
