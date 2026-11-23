@@ -128,3 +128,10 @@ MIT. See [LICENSE](LICENSE).
 - Slider tracks resolve focus against their owning window before accepting pointer input; this enables both float and integer slider callbacks.
 - Slider fill and grab positions update directly from the pointer's horizontal position while dragging.
 - `Text()` uses custom dynamic justified wrapping by measuring words and distributing spacing across wrapped lines; Roblox does not provide a `Justify` enum value. Set `Align = Enum.TextXAlignment.Left`, `Center`, or `Right` to use native alignment instead. Rich-text labels retain Roblox native wrapping.
+
+
+### Button and slider interaction feedback
+
+- Buttons use distinct normal, hovered, and pressed states. The pressed color remains active while the pointer is held down; moving off the button cancels the pressed visual state.
+- Float and integer sliders highlight the track on hover and use a brighter, slightly larger grab while hovered or actively dragged. Their active track state is distinct from the idle and hover states.
+- These visual states use the configurable `Button`, `ButtonHovered`, `ButtonActive`, `FrameBg`, `FrameBgHovered`, `FrameBgActive`, and `SliderGrab` style colors.
