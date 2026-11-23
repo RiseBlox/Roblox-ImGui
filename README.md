@@ -187,5 +187,5 @@ MIT. See [LICENSE](LICENSE).
 - `GetColumnIndex()` returns the current zero-based column index. `GetColumnWidth(index?)` returns a column width in pixels; omit the index or pass `-1` for the current column.
 - `SetColumnWidth(index, width)` sets a persistent pixel width for a column; pass `-1` for the current column. Remaining flexible columns share the available width.
 - `EndColumns()` closes the region and resumes the parent layout. Column scopes must be closed before `Render()`.
-- Column widths adapt to the available parent width. Set widths consistently each frame when a fixed layout is desired.
+- Column widths adapt to the available parent width, with horizontal `Style.ItemSpacing.X` gutters between columns. Dividers are centered in those gutters. Set widths consistently each frame when a fixed layout is desired.
 - This is the legacy Columns API; the more capable table API is planned for M03 Part D.
