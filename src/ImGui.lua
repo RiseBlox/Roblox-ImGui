@@ -947,10 +947,6 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     track.ClipsDescendants = true
     if not track:FindFirstChildOfClass("UICorner") then round(track, self.Style.FrameRounding) end
 
-    local fill = track:FindFirstChild("Fill") or make("Frame", track, {
-        Name = "Fill", BackgroundColor3 = self.Style.Accent, BorderSizePixel = 0,
-    })
-    if not fill:FindFirstChildOfClass("UICorner") then round(fill, self.Style.FrameRounding) end
     local valueText = track:FindFirstChild("Value") or make("TextLabel", track, {
         Name = "Value", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
@@ -969,15 +965,13 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         local function refreshSliderVisual()
             local pressed = track:GetAttribute("ImGuiPressed") == true
             local hovered = track:GetAttribute("ImGuiHovered") == true
-            -- Keep the track dark while dragging so the Accent fill remains
-            -- visually distinct and its progress is still easy to read.
+            -- The track stays unfilled; only the movable grab changes state.
             track.BackgroundColor3 = hovered and not pressed and self.Style.FrameBgHovered or self.Style.FrameBg
             track.BackgroundTransparency = hovered and not pressed and 0.08 or self.Style.FrameBgTransparency
-            -- Use the muted pressed tone on the grab, never the bright button-hover tone.
-            grab.BackgroundColor3 = pressed and self.Style.ButtonActive or self.Style.SliderGrab
+            grab.BackgroundColor3 = pressed and self.Style.ButtonActive
+                or hovered and self.Style.ButtonHovered or self.Style.SliderGrab
             local grabWidth = pressed and 14 or hovered and 12 or self.Style.GrabMinSize
             grab.Size = UDim2.fromOffset(grabWidth, 18)
-            fill.BackgroundTransparency = 0
         end
         table.insert(self._connections, track.MouseEnter:Connect(function()
             track:SetAttribute("ImGuiHovered", true)
@@ -1006,13 +1000,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     local function update(input)
         local alpha = math.clamp((input.Position.X - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
         local nextValue = minValue + (maxValue - minValue) * alpha
-        -- The value label is rounded to 3 decimals. Treat values that
-        -- still display as the minimum as an empty track, avoiding a tiny
-        -- residual fill/handle caused by floating-point precision.
-        local hasProgress = alpha >= 0.0005
-        fill.Visible = hasProgress
-        fill.Size = UDim2.new(hasProgress and alpha or 0, 0, 1, 0)
-        grab.Visible = hasProgress
+        -- Keep a single movable grab visible across the entire range.
         positionGrab(alpha)
         valueText.Text = string.format("%.3f", nextValue)
         local fn = self._callbacks and self._callbacks[key]
@@ -1020,10 +1008,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     end
     value = math.clamp(tonumber(value) or minValue, minValue, maxValue)
     local initialAlpha = math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
-    local hasInitialProgress = initialAlpha >= 0.0005
-    fill.Visible = hasInitialProgress
-    fill.Size = UDim2.new(hasInitialProgress and initialAlpha or 0, 0, 1, 0)
-    grab.Visible = hasInitialProgress
+    grab.Visible = true
     positionGrab(initialAlpha)
     valueText.Text = string.format("%.3f", value)
     self._callbacks = self._callbacks or {}
