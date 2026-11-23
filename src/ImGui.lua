@@ -1582,7 +1582,7 @@ local function columnAvailableWidth(columns)
     return math.max(width, 1)
 end
 
-local function refreshColumnWidths(self, columns)
+local function resolvedColumnWidths(columns)
     local available = columnAvailableWidth(columns)
     local fixedTotal, flexibleCount = 0, 0
     for index = 1, columns.Count do
@@ -1592,23 +1592,25 @@ local function refreshColumnWidths(self, columns)
     local fixedScale = fixedTotal > available and available / fixedTotal or 1
     local remaining = math.max(available - math.min(fixedTotal, available), 0)
     local flexibleWidth = flexibleCount > 0 and remaining / flexibleCount or 0
-    local x = 0
+    local result = {}
     for index = 1, columns.Count do
-        local width = columns.Widths[index] and columns.Widths[index] * fixedScale or flexibleWidth
-        local column = columns.Frames[index]
-        column.Position = UDim2.fromOffset(0, 0)
-        column.Size = UDim2.new(width / available, 0, 0, 0)
-        column.LayoutOrder = index
-        x += width
+        result[index] = columns.Widths[index] and columns.Widths[index] * fixedScale or flexibleWidth
     end
+    return available, result
+end
+
+local function refreshColumnWidths(self, columns)
+    local available, widths = resolvedColumnWidths(columns)
+    for index = 1, columns.Count do
+        local column = columns.Frames[index]
+        column.Size = UDim2.new(widths[index] / available, 0, 0, 0)
+        column.LayoutOrder = index
+    end
+    local boundary = 0
     for index, border in ipairs(columns.Borders) do
-        local boundary = 0
-        for columnIndex = 1, index do
-            local width = columns.Widths[columnIndex] and columns.Widths[columnIndex] * fixedScale or flexibleWidth
-            boundary += width
-        end
-        border.Position = UDim2.new(0, math.floor(boundary - 1), 0, 0)
-        border.Size = UDim2.new(0, 1, 1, 0)
+        boundary += widths[index]
+        border.Position = UDim2.fromOffset(math.floor(boundary - 1), 0)
+        border.Size = UDim2.fromOffset(1, math.max(columns.Content.AbsoluteSize.Y, 1))
     end
 end
 
@@ -1688,9 +1690,10 @@ function ImGui:GetColumnWidth(columnIndex)
     index = math.floor(index) + 1
     assert(index >= 1 and index <= columns.Count, "GetColumnWidth() column index is out of range")
     refreshColumnWidths(self, columns)
-    return columns.Frames[index].AbsoluteSize.X > 0
-        and columns.Frames[index].AbsoluteSize.X
-        or math.floor(columnAvailableWidth(columns) / columns.Count + 0.5)
+    local actual = columns.Frames[index].AbsoluteSize.X
+    if actual > 0 then return actual end
+    local _, widths = resolvedColumnWidths(columns)
+    return math.floor(widths[index] + 0.5)
 end
 
 function ImGui:SetColumnWidth(columnIndex, width)
