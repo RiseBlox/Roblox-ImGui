@@ -95,6 +95,13 @@ function ImGui:GetID(id)
     return (prefix ~= "" and prefix .. "/" or "") .. tostring(id)
 end
 
+-- Match _widget() identity exactly so callbacks cannot collide across windows,
+-- child regions, tree scopes, or explicit PushID() scopes.
+function ImGui:_callbackKey(id)
+    local localKey = self:GetID(id)
+    return (self._scope ~= "" and self._scope .. "/" or "") .. localKey
+end
+
 -- Centralized connection ownership. Every event listener created by this context is
 -- registered here so Destroy() can disconnect it, including global input listeners.
 function ImGui:_connect(signal, callback)
@@ -539,13 +546,13 @@ function ImGui:Button(label, config)
         end)
         self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local callback = self._callbacks and self._callbacks[key]
+            local callback = self._callbacks and self._callbacks[self:_callbackKey(key)]
             if callback then callback() end
         end)
     end
 
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = config.Callback
+    self._callbacks[self:_callbackKey(key)] = config.Callback
     -- _widget reapplies its property table every frame. Reassert the state
     -- after that reset so hover and active feedback remains visible.
     refreshButtonVisual()
@@ -579,7 +586,7 @@ function ImGui:Checkbox(label, value, callback, id)
     check.Visible = value == true
     button:SetAttribute("ImGuiValue", value == true)
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
         self:_connect(button.Activated, function()
@@ -587,7 +594,7 @@ function ImGui:Checkbox(label, value, callback, id)
             local nextValue = not (button:GetAttribute("ImGuiValue") == true)
             button:SetAttribute("ImGuiValue", nextValue)
             check.Visible = nextValue
-            local fn = self._callbacks[key]
+            local fn = self._callbacks[self:_callbackKey(key)]
             if fn then fn(nextValue) end
         end)
     end
@@ -630,12 +637,12 @@ function ImGui:RadioButton(label, active, callback, id)
         self:_connect(button.MouseLeave, function() button.BackgroundTransparency = 1 end)
     end
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
         self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local fn = self._callbacks[key]
+            local fn = self._callbacks[self:_callbackKey(key)]
             if fn then fn() end
         end)
     end
@@ -667,7 +674,7 @@ function ImGui:Selectable(label, selected, callback, id)
         end)
         self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local fn = self._callbacks and self._callbacks[key]
+            local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
             if fn then fn(not (button:GetAttribute("ImGuiSelected") == true)) end
         end)
     end
@@ -675,7 +682,7 @@ function ImGui:Selectable(label, selected, callback, id)
     button.BackgroundColor3 = selected and self.Style.HeaderActive or self.Style.Header
     button.BackgroundTransparency = selected and 0.35 or 1
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     return selected == true
 end
 
@@ -737,7 +744,7 @@ function ImGui:Combo(label, selected, items, callback, id)
                 frame:SetAttribute("ImGuiComboIndex", selected)
                 choice.Text = "  " .. tostring(items[selected] or "")
                 popup.Visible = false
-                local fn = self._callbacks and self._callbacks[key]
+                local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
                 if fn then fn(selected, items[selected]) end
             end)
         end
@@ -769,15 +776,16 @@ function ImGui:Combo(label, selected, items, callback, id)
     end
     frame:SetAttribute("ImGuiComboIndex", selectedIndex)
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     return selectedIndex
 end
 
 -- CollapsingHeader and TreeNode expose open state; gate child submissions with the returned boolean.
 function ImGui:CollapsingHeader(label, id)
     local key = id or ("CollapsingHeader:" .. tostring(label))
+    local stateKey = self:_callbackKey(key)
     self._treeState = self._treeState or {}
-    local open = self._treeState[key] == true
+    local open = self._treeState[stateKey] == true
     local button = self:_add(key, "TextButton", {
         Name = "CollapsingHeader", Size = UDim2.new(1, 0, 0, 22),
         BackgroundColor3 = self.Style.Header, BackgroundTransparency = 0.65,
@@ -791,8 +799,8 @@ function ImGui:CollapsingHeader(label, id)
         self:_connect(button.MouseLeave, function() button.BackgroundColor3 = self.Style.Header end)
         self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local nextOpen = not (self._treeState and self._treeState[key] == true)
-            self._treeState[key] = nextOpen
+            local nextOpen = not (self._treeState and self._treeState[stateKey] == true)
+            self._treeState[stateKey] = nextOpen
             button:SetAttribute("ImGuiOpen", nextOpen)
             button.Text = (nextOpen and "▾  " or "▸  ") .. tostring(label)
         end)
@@ -803,8 +811,9 @@ end
 
 function ImGui:TreeNode(label, id)
     local key = id or ("TreeNode:" .. tostring(label))
+    local stateKey = self:_callbackKey(key)
     self._treeState = self._treeState or {}
-    local open = self._treeState[key] == true
+    local open = self._treeState[stateKey] == true
     local button = self:_add(key, "TextButton", {
         Name = "TreeNode", Size = UDim2.new(1, 0, 0, 20),
         BackgroundTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false,
@@ -816,8 +825,8 @@ function ImGui:TreeNode(label, id)
         button:SetAttribute("ImGuiTreeConnected", true)
         self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local nextOpen = not (self._treeState and self._treeState[key] == true)
-            self._treeState[key] = nextOpen
+            local nextOpen = not (self._treeState and self._treeState[stateKey] == true)
+            self._treeState[stateKey] = nextOpen
             button:SetAttribute("ImGuiOpen", nextOpen)
             button.Text = (nextOpen and "▼  " or "▶  ") .. tostring(label)
         end)
@@ -1018,7 +1027,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         -- Keep a single movable grab visible across the entire range.
         positionGrab(alpha)
         valueText.Text = string.format("%.3f", nextValue)
-        local fn = self._callbacks and self._callbacks[key]
+        local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
         if fn then fn(nextValue) end
     end
     value = math.clamp(tonumber(value) or minValue, minValue, maxValue)
@@ -1027,7 +1036,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     positionGrab(initialAlpha)
     valueText.Text = string.format("%.3f", value)
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     refreshSliderVisual()
     if track:GetAttribute("ImGuiSliderConnected") ~= true then
         track:SetAttribute("ImGuiSliderConnected", true)
@@ -1120,7 +1129,7 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
     drag:SetAttribute("ImGuiDragMin", minValue)
     drag:SetAttribute("ImGuiDragMax", maxValue)
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     if drag:GetAttribute("ImGuiDragConnected") ~= true then
         drag:SetAttribute("ImGuiDragConnected", true)
         local ownerWindow = self.CurrentWindow
@@ -1150,7 +1159,7 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
                 fillAlpha = math.clamp((nextValue - low) / (high - low), 0, 1)
             end
             dragFill.Size = UDim2.new(fillAlpha, 0, 1, 0)
-            local fn = self._callbacks and self._callbacks[key]
+            local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
             if fn then fn(nextValue) end
         end
         self:_connect(drag.InputBegan, function(input)
@@ -1229,7 +1238,7 @@ local function numericInput(self, label, value, callback, config, integer)
         input.Text = integer and tostring(value) or string.format("%." .. tostring(decimals) .. "f", value)
     end
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     if input:GetAttribute("ImGuiNumericConnected") ~= true then
         input:SetAttribute("ImGuiNumericConnected", true)
         self:_connect(input.Focused, function() input.BackgroundColor3 = self.Style.FrameBgActive end)
@@ -1243,7 +1252,7 @@ local function numericInput(self, label, value, callback, config, integer)
             end
             input:SetAttribute("ImGuiNumericValue", nextValue)
             input.Text = integer and tostring(nextValue) or string.format("%." .. tostring(decimals) .. "f", nextValue)
-            local fn = self._callbacks and self._callbacks[key]
+            local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
             if fn then fn(nextValue) end
         end)
     end
@@ -1357,12 +1366,12 @@ function ImGui:InputText(label, value, callback, config)
     if input:GetAttribute("ImGuiTextConnected") ~= true then
         input:SetAttribute("ImGuiTextConnected", true)
         self:_connect(input:GetPropertyChangedSignal("Text"), function()
-            local fn = self._callbacks and self._callbacks[key]
+            local fn = self._callbacks and self._callbacks[self:_callbackKey(key)]
             if fn then fn(input.Text) end
         end)
     end
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     return input.Text
 end
 
@@ -1428,7 +1437,7 @@ function ImGui:ColorEdit(label, color, callback, id)
     local key = id or ("ColorEdit:" .. tostring(label))
     local frame = colorPreviewRow(self, label, color, key, true)
     self._callbacks = self._callbacks or {}
-    self._callbacks[key] = callback
+    self._callbacks[self:_callbackKey(key)] = callback
     if frame:GetAttribute("ImGuiColorOpen") == true then
         submitColorChannels(self, key, color, callback)
     end
