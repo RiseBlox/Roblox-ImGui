@@ -909,6 +909,7 @@ end
 
 function ImGui:ProgressBar(fraction, size, overlay, id)
     local key = id or ("ProgressBar:" .. tostring(overlay or ""))
+    local stateKey = self:_callbackKey(key)
     local bar = self:_add(key, "Frame", {
         Name = "ProgressBar", Size = size or UDim2.new(1, 0, 0, 18),
         BackgroundColor3 = self.Style.FrameBg, BorderSizePixel = 0,
@@ -930,7 +931,7 @@ function ImGui:ProgressBar(fraction, size, overlay, id)
     label.Text = tostring(overlay or "")
 
     self._progressBars = self._progressBars or {}
-    local controller = self._progressBars[key]
+    local controller = self._progressBars[stateKey]
     if not controller then
         controller = { Frame = bar }
         function controller:SetFraction(nextFraction, nextOverlay)
@@ -947,7 +948,7 @@ function ImGui:ProgressBar(fraction, size, overlay, id)
             return self:SetFraction((tonumber(percentage) or 0) / 100, nextOverlay or (tostring(math.floor((tonumber(percentage) or 0) + 0.5)) .. "%"))
         end
         controller.SetValue = controller.SetFraction
-        self._progressBars[key] = controller
+        self._progressBars[stateKey] = controller
     end
     controller.Frame = bar
     controller:SetFraction(fraction, overlay)
