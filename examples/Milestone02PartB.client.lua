@@ -23,6 +23,10 @@ local function draw()
     if firstFrame then flags.Position = UDim2.fromOffset(140, 100); firstFrame = false end
     if ui:Begin("M02 Part B - Numeric Controls", flags) then
         ui:Text("Milestone 02 / Part B")
+        ui:Button("Hover / hold / click me", { ID = "m02b-interaction-button", Callback = function()
+            state.Changes += 1
+        end })
+        ui:Text("Button and slider states: hover the button, hold the mouse button, then hover and drag each slider.")
         ui:Text("This long explanatory line should wrap automatically and use justified alignment when the window is narrowed, then expand again when the window is widened. It should not run past the right edge.")
         ui:Separator("Drag controls")
         ui:DragFloat("Float drag", state.DragFloat, 0.01, 0, 1, function(value)
