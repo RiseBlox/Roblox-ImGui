@@ -21,7 +21,7 @@ A Roblox-native GUI library inspired by Dear ImGui, with an immediate-mode-style
 - Compact widget rows with right-side labels, square frames, minimal rounding, active-window title styling, and visible slider grabs
 - ID stack: PushID, PopID, GetID
 - Text, buttons, checkboxes, radio buttons, selectables, combo boxes, collapsing headers, tree nodes, bullet text, images, progress bars, float/integer sliders, drag controls, numeric inputs, text inputs, and HSV color edit/picker controls
-- Separators, spacing, same-line rows, explicit new lines, dummy spacers, indentation scopes, groups, a configurable ImGui-style palette/layout, built-in demo
+- Separators, spacing, same-line rows, explicit new lines, dummy spacers, indentation scopes, groups, legacy multi-column layouts, a configurable ImGui-style palette/layout, built-in demo
 - Retained Roblox instances keyed by widget ID; widgets are resubmitted each frame and their GUI instances are reused
 
 This is an initial foundation, not feature parity. The API follows an immediate-mode-style frame submission pattern, while rendering currently uses retained Roblox GUI instances.
@@ -91,7 +91,7 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 | CalcItemWidth() | Calculate the effective width from the next-item setting, width stack, or default |\n| DragFloat / DragInt | Adjust values by horizontal dragging; accepts speed, optional minimum/maximum, callback, and ID |\n| InputFloat / InputInt | Edit numeric values in a text field; commits on focus loss; config supports ID, Min, Max, Decimals, and Placeholder |\n| ColorEdit(label, color, callback?, id?) | Show a clickable color swatch that expands into HSV controls; callback receives a Color3 |\n| ColorPicker(label, color, callback?, id?) | Show a live color swatch and always-visible HSV controls; callback receives a Color3 |
 | InputText(label, value, callback, config?) | Render a text input |
 | Separator(text?) / Spacing(amount?) | Separator and vertical spacing helpers; amount is pixel height |
-| SameLine() / NewLine() | Place the next item beside the previous item, or resume vertical flow |
+| SameLine() / NewLine() | Place the next item beside the previous item, or resume vertical flow |\n| Columns(count, id?, border?) / NextColumn() / EndColumns() | Begin a legacy multi-column layout, advance/wrap between columns, and close it |\n| GetColumnIndex() / GetColumnWidth(index?) / SetColumnWidth(index, width) | Query the zero-based active column and read/set column widths in pixels |
 | Dummy(size) | Add an invisible layout item with a UDim2 size |
 | Indent(width?) / Unindent() | Open/close an indented vertical layout scope; default width is 14 pixels |
 | BeginGroup() / EndGroup() | Open/close a grouped vertical layout scope |
@@ -103,7 +103,7 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 
 1. Core interaction and lifecycle: frame lifecycle guards, stable widget identity across windows/children, click-to-focus and click-to-front, title hover states, nested scopes, and context cleanup. Initial interaction smoke test: \`examples/Milestone01InteractionTest.client.lua\`.
 2. Widget coverage: core controls, Part A selection/tree/display widgets, Part B numeric controls, and Part C color controls; tabs, tables, menus, popups, and modal dialogs remain future widget work.
-3. Layout: Part A basic primitives (SameLine, NewLine, Spacing, Dummy, Indent/Unindent, BeginGroup/EndGroup); Part B item widths and alignment (`examples/Milestone03PartB.client.lua`); Part C columns; Part D tables and advanced layout.
+3. Layout: Part A basic primitives (SameLine, NewLine, Spacing, Dummy, Indent/Unindent, BeginGroup/EndGroup); Part B item widths and alignment (`examples/Milestone03PartB.client.lua`); Part C legacy columns (`examples/Milestone03PartC.client.lua`); Part D tables and advanced layout.
 4. Interaction: keyboard navigation, focus, shortcuts, gamepad navigation, drag-and-drop.
 5. Drawing: draw lists, primitives, clipping, gradients, images and custom callbacks.
 6. Window systems: resizing, collapsing, docking and multi-window management where Roblox permits.
@@ -149,3 +149,14 @@ MIT. See [LICENSE](LICENSE).
 - Width-aware controls include sliders, drag controls, numeric inputs, and text inputs. Buttons and ordinary text retain their natural/default layout.
 - Sliders use an unfilled track with one movable grab block; they do not render a progress-fill segment.
 - Widths are clamped to the current available content width, accounting for the active window/child/indent content padding.
+
+
+### Columns (M03 Part C)
+
+- `Columns(count, id?, border?)` begins a legacy Dear ImGui-style multi-column region. The count must be between 1 and 64; nested column regions are not supported.
+- `NextColumn()` advances to the next zero-based column and wraps to column 0 after the last column. Each column has its own vertical item flow.
+- `GetColumnIndex()` returns the current zero-based column index. `GetColumnWidth(index?)` returns a column width in pixels; omit the index or pass `-1` for the current column.
+- `SetColumnWidth(index, width)` sets a persistent pixel width for a column; pass `-1` for the current column. Remaining flexible columns share the available width.
+- `EndColumns()` closes the region and resumes the parent layout. Column scopes must be closed before `Render()`.
+- Column widths adapt to the available parent width. Set widths consistently each frame when a fixed layout is desired.
+- This is the legacy Columns API; the more capable table API is planned for M03 Part D.
