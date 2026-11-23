@@ -72,7 +72,7 @@ function ImGui.new(config)
         FrameNumber = 0, _idStack = {}, _order = 0, _windowOrder = 0, _connections = {}, _callbacks = {},
         _frameActive = false, _destroyed = false, _treeStack = {},
         _lastItem = nil, _sameLineRow = nil, _sameLineRequested = false,
-        _indentStack = {}, _groupStack = {},
+        _indentStack = {}, _groupStack = {}, _itemWidthStack = {}, _nextItemWidth = nil,
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
 
@@ -187,6 +187,7 @@ function ImGui:NewFrame()
     self._treeStack = {}
     self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
     self._indentStack, self._groupStack = {}, {}
+    self._itemWidthStack, self._nextItemWidth = {}, nil
     self._scope = ""
     self.CurrentWindow, self.CurrentParent = nil, nil
     self._frameActive = true
@@ -670,7 +671,7 @@ function ImGui:Combo(label, selected, items, callback, id)
         ClipsDescendants = false, ZIndex = 5,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Size = UDim2.new(0.36, 0, 1, 0), BackgroundTransparency = 1,
+        Name = "Label", Size = UDim2.new(1, -(itemWidth + 8), 1, 0), BackgroundTransparency = 1,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
     })
@@ -923,22 +924,26 @@ end
 function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     minValue, maxValue = minValue or 0, maxValue or 1
     assert(maxValue > minValue, "SliderFloat maxValue must be greater than minValue")
+    local itemWidth, availableWidth = self:_consumeItemWidth(0.64)
     local key = id or ("Slider:" .. tostring(label))
     local frame = self:_add(key, "Frame", {
         Name = "Slider", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Position = UDim2.new(0.70, 0, 0, 0),
-        Size = UDim2.new(0.30, 0, 1, 0), BackgroundTransparency = 1,
+        Name = "Label", Position = UDim2.fromOffset(itemWidth + 8, 0),
+        Size = UDim2.new(1, -(itemWidth + 8), 1, 0), BackgroundTransparency = 1,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
     })
     title.Text = tostring(label)
+    title.Position = UDim2.fromOffset(itemWidth + 8, 0)
+    title.Size = UDim2.new(1, -(itemWidth + 8), 1, 0)
     local track = frame:FindFirstChild("Track") or make("TextButton", frame, {
-        Name = "Track", Position = UDim2.new(0, 0, 0.5, -9), Size = UDim2.new(0.64, 0, 0, 18),
+        Name = "Track", Position = UDim2.new(0, 0, 0.5, -9), Size = UDim2.fromOffset(itemWidth, 18),
         BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
         BorderSizePixel = 0, Text = "", AutoButtonColor = false,
     })
+    track.Size = UDim2.fromOffset(itemWidth, 18)
     track.ClipsDescendants = true
     if not track:FindFirstChildOfClass("UICorner") then round(track, self.Style.FrameRounding) end
 
@@ -1060,6 +1065,7 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
     value = tonumber(value) or 0
     if minValue then value = math.max(value, minValue) end
     if maxValue then value = math.min(value, maxValue) end
+    local itemWidth, availableWidth = self:_consumeItemWidth(0.62)
     local key = id or ("DragFloat:" .. tostring(label))
     local frame = self:_add(key, "Frame", {Name = "DragFloat", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1})
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
@@ -1068,12 +1074,15 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
     })
     title.Text = tostring(label)
+    title.Size = UDim2.new(1, -(itemWidth + 8), 1, 0)
     local drag = frame:FindFirstChild("Drag") or make("TextButton", frame, {
-        Name = "Drag", Position = UDim2.new(0.38, 0, 0, 1), Size = UDim2.new(0.62, 0, 0, 24),
+        Name = "Drag", Position = UDim2.new(1, -itemWidth, 0, 1), Size = UDim2.fromOffset(itemWidth, 24),
         BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
         BorderSizePixel = 0, AutoButtonColor = false, Text = "", Font = self.Style.Font,
         TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
     })
+    drag.Position = UDim2.new(1, -itemWidth, 0, 1)
+    drag.Size = UDim2.fromOffset(itemWidth, 24)
     if not drag:FindFirstChildOfClass("UICorner") then round(drag, self.Style.FrameRounding) end
     local dragFill = drag:FindFirstChild("Fill") or make("Frame", drag, {
         Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = self.Style.Accent,
@@ -1190,20 +1199,25 @@ local function numericInput(self, label, value, callback, config, integer)
         return candidate
     end
     value = normalize(value) or 0
+    local itemWidth, availableWidth = self:_consumeItemWidth(0.64)
     local frame = self:_add(key, "Frame", {Name = integer and "InputInt" or "InputFloat", Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1})
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Position = UDim2.new(0.70, 0, 0, 0), Size = UDim2.new(0.30, 0, 0, 24),
+        Name = "Label", Position = UDim2.fromOffset(itemWidth + 8, 0), Size = UDim2.new(1, -(itemWidth + 8), 0, 24),
         BackgroundTransparency = 1, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
     })
     title.Text = tostring(label)
+    title.Position = UDim2.fromOffset(itemWidth + 8, 0)
+    title.Size = UDim2.new(1, -(itemWidth + 8), 0, 24)
     local input = frame:FindFirstChild("Input") or make("TextBox", frame, {
-        Name = "Input", Position = UDim2.fromOffset(0, 1), Size = UDim2.new(0.64, 0, 0, 23),
+        Name = "Input", Position = UDim2.fromOffset(0, 1), Size = UDim2.fromOffset(itemWidth, 23),
         BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
         BorderSizePixel = 0, ClearTextOnFocus = false, Font = self.Style.Font,
         TextSize = self.Style.FontSize, TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Left,
     })
+    input.Position = UDim2.fromOffset(0, 1)
+    input.Size = UDim2.fromOffset(itemWidth, 23)
     if not input:FindFirstChildOfClass("UICorner") then round(input, self.Style.FrameRounding) end
     input.PlaceholderText = config.Placeholder or (integer and "0" or "0.000")
     input:SetAttribute("ImGuiNumericValue", value)
@@ -1241,27 +1255,92 @@ function ImGui:InputInt(label, value, callback, config)
     return numericInput(self, label, value, callback, config, true)
 end
 
+-- Item-width stack and one-shot width, following Dear ImGui's positive/negative width rules.
+local function contentWidth(self)
+    local parent = self.CurrentParent
+    if not parent then return 1 end
+    local width = parent.AbsoluteSize.X
+    if width <= 0 then
+        width = parent.Size.X.Offset
+        if parent.Parent and parent.Parent:IsA("GuiObject") then
+            width += parent.Parent.AbsoluteSize.X * parent.Size.X.Scale
+        end
+    end
+    local padding = parent:FindFirstChildOfClass("UIPadding")
+    if padding then
+        width -= padding.PaddingLeft.Offset + padding.PaddingRight.Offset
+    end
+    return math.max(width, 1)
+end
+
+function ImGui:SetNextItemWidth(width)
+    assert(self._frameActive and self.CurrentParent, "SetNextItemWidth() must be called inside Begin()")
+    width = tonumber(width)
+    assert(width and width == width and width ~= math.huge and width ~= -math.huge,
+        "SetNextItemWidth(width) expects a finite number")
+    self._nextItemWidth = width
+end
+
+function ImGui:PushItemWidth(width)
+    assert(self._frameActive and self.CurrentParent, "PushItemWidth() must be called inside Begin()")
+    width = tonumber(width)
+    assert(width and width == width and width ~= math.huge and width ~= -math.huge,
+        "PushItemWidth(width) expects a finite number")
+    table.insert(self._itemWidthStack, width)
+end
+
+function ImGui:PopItemWidth()
+    assert(#self._itemWidthStack > 0, "PopItemWidth() called without a matching PushItemWidth()")
+    table.remove(self._itemWidthStack)
+end
+
+function ImGui:CalcItemWidth()
+    local width = self._nextItemWidth
+    if width == nil then width = self._itemWidthStack[#self._itemWidthStack] end
+    local available = contentWidth(self)
+    if width == nil then return math.max(1, math.floor(available * 0.64 + 0.5)) end
+    if width < 0 then width = available + width end
+    return math.max(1, math.floor(math.min(width, available) + 0.5))
+end
+
+function ImGui:_consumeItemWidth(defaultFraction)
+    local requested = self._nextItemWidth
+    self._nextItemWidth = nil
+    if requested == nil then requested = self._itemWidthStack[#self._itemWidthStack] end
+    local available = contentWidth(self)
+    if requested == nil then
+        return math.max(1, math.floor(available * (defaultFraction or 0.64) + 0.5)), available
+    end
+    local width = requested < 0 and (available + requested) or requested
+    return math.max(1, math.floor(math.min(width, available) + 0.5)), available
+end
+
 function ImGui:InputText(label, value, callback, config)
     config = config or {}
+    local itemWidth = self:_consumeItemWidth(0.64)
     local key = config.ID or ("Input:" .. tostring(label))
     local frame = self:_add(key, "Frame", {
         Name = "InputText", Size = UDim2.new(1, 0, 0, config.Multiline and 58 or 26),
         BackgroundTransparency = 1,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Position = UDim2.new(0.70, 0, 0, 0),
-        Size = UDim2.new(0.30, 0, 0, 24), BackgroundTransparency = 1,
+        Name = "Label", Position = UDim2.fromOffset(itemWidth + 8, 0),
+        Size = UDim2.new(1, -(itemWidth + 8), 0, 24), BackgroundTransparency = 1,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
     })
     title.Text = tostring(label)
+    title.Position = UDim2.fromOffset(itemWidth + 8, 0)
+    title.Size = UDim2.new(1, -(itemWidth + 8), 0, 24)
     local input = frame:FindFirstChild("Input") or make("TextBox", frame, {
         Name = "Input", Position = UDim2.fromOffset(0, 1),
-        Size = UDim2.new(0.64, 0, 0, config.Multiline and 53 or 23),
+        Size = UDim2.fromOffset(itemWidth, config.Multiline and 53 or 23),
         BackgroundColor3 = self.Style.FrameBg, BackgroundTransparency = self.Style.FrameBgTransparency,
         BorderSizePixel = 0, ClearTextOnFocus = false, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextColor3 = self.Style.Text, TextXAlignment = Enum.TextXAlignment.Left,
     })
+    input.Position = UDim2.fromOffset(0, 1)
+    input.Size = UDim2.fromOffset(itemWidth, config.Multiline and 53 or 23)
     if not input:FindFirstChildOfClass("UICorner") then round(input, self.Style.FrameRounding) end
     input.PlaceholderText = config.Placeholder or ""
     input.TextXAlignment = Enum.TextXAlignment.Left
@@ -1562,6 +1641,8 @@ function ImGui:Render()
     assert(#self.WindowStack == 0, "Unclosed Begin()/BeginChild(): call End()/EndChild() before Render()")
     assert(#self._treeStack == 0, "Unclosed TreeNode(): call TreePop() before Render()")
     assert(#self._groupStack == 0, "Unclosed Indent()/BeginGroup(): close layout scopes before Render()")
+    assert(#self._itemWidthStack == 0, "Unclosed PushItemWidth(): call PopItemWidth() before Render()")
+    assert(self._nextItemWidth == nil, "SetNextItemWidth() was not consumed by an item before Render()")
     for _, object in pairs(self.Widgets) do
         if object.Parent then object.Visible = object:GetAttribute("ImGuiLastSeen") == self.FrameNumber end
     end
@@ -1584,6 +1665,8 @@ function ImGui:Destroy()
     table.clear(self._treeStack)
     table.clear(self._groupStack)
     table.clear(self._indentStack)
+    table.clear(self._itemWidthStack)
+    self._nextItemWidth = nil
     table.clear(self._callbacks or {})
     table.clear(self._progressBars or {})
  
