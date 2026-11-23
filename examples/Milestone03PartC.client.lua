@@ -15,11 +15,11 @@ local state = {
 }
 local connection
 local firstFrame = true
-local checks = {}
+local checkCount = 0
 
 local function check(condition, message)
     if not condition then error(message or "Column assertion failed", 2) end
-    table.insert(checks, message or "check")
+    checkCount += 1
 end
 
 local function draw()
@@ -123,7 +123,7 @@ end)
 _G.RobloxImGuiM03PartC = {
     UI = ui,
     State = state,
-    Checks = checks,
+    GetCheckCount = function() return checkCount end,
     Destroy = function()
         if connection then connection:Disconnect(); connection = nil end
         ui:Destroy()
