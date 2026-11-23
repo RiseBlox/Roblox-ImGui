@@ -7,7 +7,7 @@ local RunService = game:GetService("RunService")
 local ImGui = require(ReplicatedStorage:WaitForChild("ImGui"))
 
 local ui = ImGui.new({ Name = "RobloxImGuiM03PartA", DisplayOrder = 113 })
-local state = { Clicks = 0, Checked = false, VerticalClicks = 0 }
+local state = { Clicks = 0, Checked = false, VerticalClicks = 0, LayoutButtonClicks = 0 }
 local connection
 local firstFrame = true
 
@@ -31,6 +31,32 @@ local function draw()
         ui:NewLine()
         ui:Button("NewLine resumes vertical flow", { Callback = function() state.VerticalClicks += 1 end })
         ui:Text("Vertical button clicks: " .. state.VerticalClicks)
+
+        ui:Separator("Button layout combinations")
+        local function countLayoutClick()
+            state.LayoutButtonClicks += 1
+        end
+
+        ui:Text("Three buttons on one row:")
+        ui:Button("Row 1 - A", { Size = UDim2.fromOffset(112, 26), Callback = countLayoutClick })
+        ui:SameLine()
+        ui:Button("Row 1 - B", { Size = UDim2.fromOffset(112, 26), Callback = countLayoutClick })
+        ui:SameLine()
+        ui:Button("Row 1 - C", { Size = UDim2.fromOffset(112, 26), Callback = countLayoutClick })
+
+        ui:Text("Two buttons on one row:")
+        ui:Button("Left action", { Size = UDim2.fromOffset(130, 26), Callback = countLayoutClick })
+        ui:SameLine()
+        ui:Button("Right action", { Size = UDim2.fromOffset(130, 26), Callback = countLayoutClick })
+
+        ui:Text("NewLine after a same-line row:")
+        ui:Button("Inline A", { Size = UDim2.fromOffset(105, 26), Callback = countLayoutClick })
+        ui:SameLine()
+        ui:Button("Inline B", { Size = UDim2.fromOffset(105, 26), Callback = countLayoutClick })
+        ui:NewLine()
+        ui:Button("Back to vertical flow", { Size = UDim2.fromOffset(220, 26), Callback = countLayoutClick })
+
+        ui:Text("Layout button clicks: " .. state.LayoutButtonClicks)
         ui:Spacing(14)
         ui:Text("The previous item is followed by 14 pixels of extra spacing.")
         ui:Dummy(UDim2.fromOffset(80, 18))
