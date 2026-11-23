@@ -1623,9 +1623,13 @@ function ImGui:Columns(count, id, border)
         Name = "ImGuiColumns", Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
     })
-    local layout = container:FindFirstChildOfClass("UIListLayout")
+    local content = self:_widget("Columns:" .. key .. ":Content", "Frame", container, {
+        Name = "ColumnsContent", Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
+    })
+    local layout = content:FindFirstChildOfClass("UIListLayout")
     if not layout then
-        layout = make("UIListLayout", container, {
+        layout = make("UIListLayout", content, {
             FillDirection = Enum.FillDirection.Horizontal,
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 0),
@@ -1635,12 +1639,12 @@ function ImGui:Columns(count, id, border)
     local widths = self._columnWidths[key] or {}
     self._columnWidths[key] = widths
     local columns = {
-        Key = key, Count = count, Index = 1, Parent = parent, Container = container,
+        Key = key, Count = count, Index = 1, Parent = parent, Container = container, Content = content,
         Frames = {}, Borders = {}, Widths = widths, PreviousLastItem = previousLastItem,
         PreviousOrder = self._order - 1, Border = border ~= false,
     }
     for index = 1, count do
-        local column = self:_widget("Columns:" .. key .. ":Column:" .. index, "Frame", container, {
+        local column = self:_widget("Columns:" .. key .. ":Column:" .. index, "Frame", content, {
             Name = "Column" .. index, Size = UDim2.new(1 / count, 0, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
             LayoutOrder = index,
