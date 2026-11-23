@@ -69,7 +69,8 @@ function ImGui.new(config)
     local self = setmetatable({
         ScreenGui = screen, Style = table.clone(DEFAULT_STYLE), Windows = {}, Widgets = {},
         WindowStack = {}, CurrentWindow = nil, CurrentParent = nil, _scope = "", _scopeStack = {},
-        FrameNumber = 0, _idStack = {}, _order = 0, _windowOrder = 0, _connections = {}, _callbacks = {},
+        FrameNumber = 0, _idStack = {}, _order = 0, _windowOrder = 0,
+        _connections = {}, _callbacks = {}, _treeState = {}, _progressBars = {},
         _frameActive = false, _destroyed = false, _treeStack = {},
         _lastItem = nil, _sameLineRow = nil, _sameLineRequested = false,
         _indentStack = {}, _groupStack = {}, _itemWidthStack = {}, _nextItemWidth = nil, _columnsStack = {}, _columnWidths = {},
@@ -79,8 +80,16 @@ function ImGui.new(config)
     return self
 end
 
-function ImGui:PushID(id) table.insert(self._idStack, tostring(id)) end
-function ImGui:PopID() if #self._idStack > 0 then table.remove(self._idStack) end end
+function ImGui:PushID(id)
+    assert(self._frameActive, "PushID() must be called between NewFrame() and Render()")
+    table.insert(self._idStack, tostring(id))
+end
+
+function ImGui:PopID()
+    assert(self._frameActive, "PopID() must be called between NewFrame() and Render()")
+    assert(#self._idStack > 0, "PopID() called without a matching PushID()")
+    table.remove(self._idStack)
+end
 function ImGui:GetID(id)
     local prefix = table.concat(self._idStack, "/")
     return (prefix ~= "" and prefix .. "/" or "") .. tostring(id)
@@ -334,7 +343,7 @@ function ImGui:Begin(name, flags)
         or UDim2.new(1, 0, 1, -self.Style.TitleBarHeight)
     window.Title.BackgroundColor3 = self._focusedWindowName == tostring(name)
         and self.Style.TitleBgActive or self.Style.TitleBg
-    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order, LastItem = self._lastItem, SameLineRow = self._sameLineRow, SameLineRequested = self._sameLineRequested })
+    table.insert(self.WindowStack, { Kind = "Window", Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order, LastItem = self._lastItem, SameLineRow = self._sameLineRow, SameLineRequested = self._sameLineRequested })
     self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
     self._scope = "Window:" .. tostring(name)
     self.CurrentWindow, self.CurrentParent = window, window.Content
@@ -344,6 +353,7 @@ end
 
 function ImGui:End()
     assert(#self.WindowStack > 0, "End() called without a matching Begin()")
+    assert(self.WindowStack[#self.WindowStack].Kind == "Window", "End() cannot close a child region; call EndChild()")
     local previous = table.remove(self.WindowStack)
     self.CurrentWindow, self.CurrentParent = previous.Window, previous.Parent
     self._scope = previous.Scope
@@ -1749,7 +1759,7 @@ function ImGui:BeginChild(id, size)
         })
     end
     if not child:FindFirstChildOfClass("UIListLayout") then vertical(child, self.Style.ItemSpacing.Y) end
-    table.insert(self.WindowStack, { Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order, LastItem = self._lastItem, SameLineRow = self._sameLineRow, SameLineRequested = self._sameLineRequested })
+    table.insert(self.WindowStack, { Kind = "Child", Window = self.CurrentWindow, Parent = self.CurrentParent, Scope = self._scope, Order = self._order, LastItem = self._lastItem, SameLineRow = self._sameLineRow, SameLineRequested = self._sameLineRequested })
     self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
     self._scope = self._scope .. "/Child:" .. tostring(id)
     self.CurrentParent = child
@@ -1757,7 +1767,15 @@ function ImGui:BeginChild(id, size)
     return true
 end
 
-function ImGui:EndChild() self:End() end
+function ImGui:EndChild()
+    assert(#self.WindowStack > 0 and self.WindowStack[#self.WindowStack].Kind == "Child",
+        "EndChild() called without a matching BeginChild()")
+    local previous = table.remove(self.WindowStack)
+    self.CurrentWindow, self.CurrentParent = previous.Window, previous.Parent
+    self._scope = previous.Scope
+    self._order = previous.Order
+    self._lastItem, self._sameLineRow, self._sameLineRequested = previous.LastItem, previous.SameLineRow, previous.SameLineRequested
+end
 
 function ImGui:ShowDemoWindow()
     if self:Begin("Roblox-ImGui demo", { Size = UDim2.fromOffset(440, 350) }) then
@@ -1781,6 +1799,7 @@ function ImGui:Render()
     assert(self._frameActive, "Render() called without NewFrame()")
     assert(#self.WindowStack == 0, "Unclosed Begin()/BeginChild(): call End()/EndChild() before Render()")
     assert(#self._treeStack == 0, "Unclosed TreeNode(): call TreePop() before Render()")
+    assert(#self._idStack == 0, "Unclosed PushID(): call PopID() before Render()")
     assert(#self._groupStack == 0, "Unclosed Indent()/BeginGroup(): close layout scopes before Render()")
     assert(#self._columnsStack == 0, "Unclosed Columns(): call EndColumns() before Render()")
     assert(#self._itemWidthStack == 0, "Unclosed PushItemWidth(): call PopItemWidth() before Render()")
