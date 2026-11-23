@@ -64,6 +64,10 @@ end)
 -- Call ui:Destroy() when the UI is no longer needed.
 ```
 
+## Layout milestone test
+
+Run [`examples/Milestone03PartC.client.lua`](examples/Milestone03PartC.client.lua) as a client LocalScript after placing the module in `ReplicatedStorage`. It exercises three-column switching and wrapping, custom widths, bordered and borderless layouts, repeated widget IDs in separate columns, parent-flow restoration, and width-state isolation between windows. It prints runtime errors to Output and can be stopped with `_G.RobloxImGuiM03PartC.Destroy()`.
+
 ## Visual parity smoke test
 
 Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lua) as a client LocalScript after placing the module in `ReplicatedStorage`. It exercises two draggable windows, buttons, checkboxes, radio buttons, sliders, text input, progress bars, child scrolling, and window scrolling. Set initial window positions only once; reapplying a fixed position every frame prevents dragging.
@@ -178,7 +182,7 @@ MIT. See [LICENSE](LICENSE).
 
 ### Columns (M03 Part C)
 
-- `Columns(count, id?, border?)` begins a legacy Dear ImGui-style multi-column region. The count must be between 1 and 64; nested column regions are not supported.
+- `Columns(count, id?, border?)` begins a legacy Dear ImGui-style multi-column region. The count must be between 1 and 64; nested column regions are not supported. Widget IDs and persistent widths are scoped to the containing window/child and individual column.
 - `NextColumn()` advances to the next zero-based column and wraps to column 0 after the last column. Each column has its own vertical item flow.
 - `GetColumnIndex()` returns the current zero-based column index. `GetColumnWidth(index?)` returns a column width in pixels; omit the index or pass `-1` for the current column.
 - `SetColumnWidth(index, width)` sets a persistent pixel width for a column; pass `-1` for the current column. Remaining flexible columns share the available width.
