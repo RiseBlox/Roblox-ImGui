@@ -969,10 +969,12 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         local function refreshSliderVisual()
             local pressed = track:GetAttribute("ImGuiPressed") == true
             local hovered = track:GetAttribute("ImGuiHovered") == true
-            track.BackgroundColor3 = pressed and self.Style.FrameBgActive
-                or hovered and self.Style.FrameBgHovered or self.Style.FrameBg
-            track.BackgroundTransparency = pressed and 0 or hovered and 0.08 or self.Style.FrameBgTransparency
-            grab.BackgroundColor3 = pressed and self.Style.ButtonHovered or self.Style.SliderGrab
+            -- Keep the track dark while dragging so the Accent fill remains
+            -- visually distinct and its progress is still easy to read.
+            track.BackgroundColor3 = hovered and not pressed and self.Style.FrameBgHovered or self.Style.FrameBg
+            track.BackgroundTransparency = hovered and not pressed and 0.08 or self.Style.FrameBgTransparency
+            -- Use the muted pressed tone on the grab, never the bright button-hover tone.
+            grab.BackgroundColor3 = pressed and self.Style.ButtonActive or self.Style.SliderGrab
             local grabWidth = pressed and 14 or hovered and 12 or self.Style.GrabMinSize
             grab.Size = UDim2.fromOffset(grabWidth, 18)
             fill.BackgroundTransparency = 0
