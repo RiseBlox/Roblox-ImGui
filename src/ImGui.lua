@@ -690,7 +690,7 @@ function ImGui:Combo(label, selected, items, callback, id)
         ClipsDescendants = false, ZIndex = 5,
     })
     local title = frame:FindFirstChild("Label") or make("TextLabel", frame, {
-        Name = "Label", Size = UDim2.new(1, -(itemWidth + 8), 1, 0), BackgroundTransparency = 1,
+        Name = "Label", Size = UDim2.new(0.38, -8, 1, 0), BackgroundTransparency = 1,
         Font = self.Style.Font, TextSize = self.Style.FontSize, TextColor3 = self.Style.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
     })
