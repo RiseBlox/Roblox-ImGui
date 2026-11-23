@@ -456,9 +456,12 @@ end
 
 function ImGui:Button(label, config)
     config = config or {}
-    local button = self:_add(config.ID or ("Button:" .. tostring(label)), "TextButton", {
+    local key = config.ID or ("Button:" .. tostring(label))
+    local button = self:_add(key, "TextButton", {
         Name = "Button", Size = config.Size or UDim2.new(0, 0, 0, 24),
         AutomaticSize = config.Size and Enum.AutomaticSize.None or Enum.AutomaticSize.X,
+        -- These are the idle defaults. The interaction state is reapplied
+        -- below on every submission so the frame loop cannot erase hover/press.
         BackgroundColor3 = self.Style.Button, BackgroundTransparency = 0.12, BorderSizePixel = 0,
         AutoButtonColor = false, Font = self.Style.Font, TextSize = self.Style.FontSize,
         TextColor3 = self.Style.Text, Text = tostring(label),
@@ -470,52 +473,62 @@ function ImGui:Button(label, config)
         })
     end
     if not button:FindFirstChildOfClass("UICorner") then round(button, self.Style.FrameRounding) end
+
+    local function refreshButtonVisual()
+        local pressed = button:GetAttribute("ImGuiPressed") == true
+        local hovered = button:GetAttribute("ImGuiHovered") == true
+        if pressed then
+            button.BackgroundColor3 = self.Style.ButtonActive
+            button.BackgroundTransparency = 0
+        elseif hovered then
+            button.BackgroundColor3 = self.Style.ButtonHovered
+            button.BackgroundTransparency = 0
+        else
+            button.BackgroundColor3 = self.Style.Button
+            button.BackgroundTransparency = 0.12
+        end
+        button.TextColor3 = self.Style.Text
+    end
+
     if button:GetAttribute("ImGuiClickConnected") ~= true then
         button:SetAttribute("ImGuiClickConnected", true)
         button:SetAttribute("ImGuiHovered", false)
         button:SetAttribute("ImGuiPressed", false)
-        local function refreshButtonVisual()
-            local pressed = button:GetAttribute("ImGuiPressed") == true
-            local hovered = button:GetAttribute("ImGuiHovered") == true
-            if pressed then
-                button.BackgroundColor3 = self.Style.ButtonActive
-                button.BackgroundTransparency = 0
-                button.TextColor3 = self.Style.Text
-            elseif hovered then
-                button.BackgroundColor3 = self.Style.ButtonHovered
-                button.BackgroundTransparency = 0
-                button.TextColor3 = self.Style.Text
-            else
-                button.BackgroundColor3 = self.Style.Button
-                button.BackgroundTransparency = 0.12
-                button.TextColor3 = self.Style.Text
-            end
-        end
+
         table.insert(self._connections, button.MouseEnter:Connect(function()
             button:SetAttribute("ImGuiHovered", true)
             refreshButtonVisual()
         end))
         table.insert(self._connections, button.MouseLeave:Connect(function()
             button:SetAttribute("ImGuiHovered", false)
-            button:SetAttribute("ImGuiPressed", false)
             refreshButtonVisual()
         end))
-        table.insert(self._connections, button.MouseButton1Down:Connect(function()
-            button:SetAttribute("ImGuiPressed", true)
-            refreshButtonVisual()
+        table.insert(self._connections, button.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                button:SetAttribute("ImGuiPressed", true)
+                refreshButtonVisual()
+            end
         end))
-        table.insert(self._connections, button.MouseButton1Up:Connect(function()
-            button:SetAttribute("ImGuiPressed", false)
-            refreshButtonVisual()
+        table.insert(self._connections, UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                button:SetAttribute("ImGuiPressed", false)
+                refreshButtonVisual()
+            end
         end))
         table.insert(self._connections, button.Activated:Connect(function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
-            local callback = self._callbacks and self._callbacks[config.ID or ("Button:" .. tostring(label))]
+            local callback = self._callbacks and self._callbacks[key]
             if callback then callback() end
         end))
     end
+
     self._callbacks = self._callbacks or {}
-    self._callbacks[config.ID or ("Button:" .. tostring(label))] = config.Callback
+    self._callbacks[key] = config.Callback
+    -- _widget reapplies its property table every frame. Reassert the state
+    -- after that reset so hover and active feedback remains visible.
+    refreshButtonVisual()
     return button
 end
 
