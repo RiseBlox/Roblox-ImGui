@@ -72,7 +72,7 @@ function ImGui.new(config)
         FrameNumber = 0, _idStack = {}, _order = 0, _windowOrder = 0, _connections = {}, _callbacks = {},
         _frameActive = false, _destroyed = false, _treeStack = {},
         _lastItem = nil, _sameLineRow = nil, _sameLineRequested = false,
-        _indentStack = {}, _groupStack = {}, _itemWidthStack = {}, _nextItemWidth = nil,
+        _indentStack = {}, _groupStack = {}, _itemWidthStack = {}, _nextItemWidth = nil, _columnsStack = {}, _columnWidths = {},
     }, ImGui)
     for key, value in pairs(config.Style or {}) do self.Style[key] = value end
 
@@ -188,6 +188,7 @@ function ImGui:NewFrame()
     self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
     self._indentStack, self._groupStack = {}, {}
     self._itemWidthStack, self._nextItemWidth = {}, nil
+    self._columnsStack = {}
     self._scope = ""
     self.CurrentWindow, self.CurrentParent = nil, nil
     self._frameActive = true
@@ -1569,6 +1570,147 @@ function ImGui:Spacing(amount)
     })
 end
 
+
+-- Legacy Dear ImGui-style columns. Each column owns an independent vertical flow.
+local function columnAvailableWidth(columns)
+    local width = columns.Container.AbsoluteSize.X
+    if width <= 0 then
+        width = columns.Parent.AbsoluteSize.X
+        local padding = columns.Parent:FindFirstChildOfClass("UIPadding")
+        if padding then width -= padding.PaddingLeft.Offset + padding.PaddingRight.Offset end
+    end
+    return math.max(width, 1)
+end
+
+local function refreshColumnWidths(self, columns)
+    local available = columnAvailableWidth(columns)
+    local fixedTotal, flexibleCount = 0, 0
+    for index = 1, columns.Count do
+        local fixed = columns.Widths[index]
+        if fixed then fixedTotal += fixed else flexibleCount += 1 end
+    end
+    local fixedScale = fixedTotal > available and available / fixedTotal or 1
+    local remaining = math.max(available - math.min(fixedTotal, available), 0)
+    local flexibleWidth = flexibleCount > 0 and remaining / flexibleCount or 0
+    local x = 0
+    for index = 1, columns.Count do
+        local width = columns.Widths[index] and columns.Widths[index] * fixedScale or flexibleWidth
+        local column = columns.Frames[index]
+        column.Position = UDim2.fromOffset(0, 0)
+        column.Size = UDim2.new(width / available, 0, 0, 0)
+        column.LayoutOrder = index
+        x += width
+    end
+    for index, border in ipairs(columns.Borders) do
+        local boundary = 0
+        for columnIndex = 1, index do
+            local width = columns.Widths[columnIndex] and columns.Widths[columnIndex] * fixedScale or flexibleWidth
+            boundary += width
+        end
+        border.Position = UDim2.new(0, math.floor(boundary - 1), 0, 0)
+        border.Size = UDim2.new(0, 1, 1, 0)
+    end
+end
+
+function ImGui:Columns(count, id, border)
+    assert(self._frameActive and self.CurrentParent, "Columns() must be called inside Begin()")
+    count = math.floor(tonumber(count) or 1)
+    assert(count >= 1 and count <= 64, "Columns(count) expects a count between 1 and 64")
+    assert(#self._columnsStack == 0, "Nested Columns() scopes are not supported")
+    local key = tostring(id or ("Columns:" .. tostring(self._order + 1)))
+    local parent, previousLastItem = self.CurrentParent, self._lastItem
+    local container = self:_add("Columns:" .. key, "Frame", {
+        Name = "ImGuiColumns", Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
+    })
+    local layout = container:FindFirstChildOfClass("UIListLayout")
+    if not layout then
+        layout = make("UIListLayout", container, {
+            FillDirection = Enum.FillDirection.Horizontal,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 0),
+            VerticalAlignment = Enum.VerticalAlignment.Top,
+        })
+    end
+    local widths = self._columnWidths[key] or {}
+    self._columnWidths[key] = widths
+    local columns = {
+        Key = key, Count = count, Index = 1, Parent = parent, Container = container,
+        Frames = {}, Borders = {}, Widths = widths, PreviousLastItem = previousLastItem,
+        PreviousOrder = self._order - 1, Border = border ~= false,
+    }
+    for index = 1, count do
+        local column = self:_widget("Columns:" .. key .. ":Column:" .. index, "Frame", container, {
+            Name = "Column" .. index, Size = UDim2.new(1 / count, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
+            LayoutOrder = index,
+        })
+        if not column:FindFirstChildOfClass("UIListLayout") then vertical(column, self.Style.ItemSpacing.Y) end
+        columns.Frames[index] = column
+        if columns.Border and index < count then
+            local line = self:_widget("Columns:" .. key .. ":Border:" .. index, "Frame", container, {
+                Name = "ColumnBorder" .. index, BackgroundColor3 = self.Style.Separator,
+                BorderSizePixel = 0, Size = UDim2.new(0, 1, 1, 0), ZIndex = 3,
+            })
+            columns.Borders[index] = line
+        end
+    end
+    table.insert(self._columnsStack, columns)
+    refreshColumnWidths(self, columns)
+    self.CurrentParent = columns.Frames[1]
+    self._order = 0
+    self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
+end
+
+function ImGui:NextColumn()
+    local columns = self._columnsStack[#self._columnsStack]
+    assert(columns, "NextColumn() called outside Columns()")
+    columns.Index = columns.Index % columns.Count + 1
+    self.CurrentParent = columns.Frames[columns.Index]
+    self._order = 0
+    self._lastItem, self._sameLineRow, self._sameLineRequested = nil, nil, false
+end
+
+function ImGui:GetColumnIndex()
+    local columns = self._columnsStack[#self._columnsStack]
+    return columns and (columns.Index - 1) or 0
+end
+
+function ImGui:GetColumnWidth(columnIndex)
+    local columns = self._columnsStack[#self._columnsStack]
+    if not columns then return contentWidth(self) end
+    local index = tonumber(columnIndex) or -1
+    if index == -1 then index = columns.Index - 1 end
+    index = math.floor(index) + 1
+    assert(index >= 1 and index <= columns.Count, "GetColumnWidth() column index is out of range")
+    refreshColumnWidths(self, columns)
+    return columns.Frames[index].AbsoluteSize.X > 0
+        and columns.Frames[index].AbsoluteSize.X
+        or math.floor(columnAvailableWidth(columns) / columns.Count + 0.5)
+end
+
+function ImGui:SetColumnWidth(columnIndex, width)
+    local columns = self._columnsStack[#self._columnsStack]
+    assert(columns, "SetColumnWidth() called outside Columns()")
+    local index = math.floor(tonumber(columnIndex) or -1)
+    if index == -1 then index = columns.Index - 1 end
+    index += 1
+    assert(index >= 1 and index <= columns.Count, "SetColumnWidth() column index is out of range")
+    width = tonumber(width)
+    assert(width and width > 0 and width == width and width < math.huge,
+        "SetColumnWidth() expects a positive finite pixel width")
+    columns.Widths[index] = width
+    refreshColumnWidths(self, columns)
+end
+
+function ImGui:EndColumns()
+    local columns = table.remove(self._columnsStack)
+    assert(columns, "EndColumns() called without a matching Columns()")
+    self.CurrentParent = columns.Parent
+    self._order = columns.PreviousOrder + 1
+    self._lastItem, self._sameLineRow, self._sameLineRequested = columns.Container, nil, false
+end
+
 function ImGui:BeginChild(id, size)
     assert(self._frameActive, "Call NewFrame() before BeginChild()")
     assert(self.CurrentParent, "Call Begin() before BeginChild()")
@@ -1625,6 +1767,7 @@ function ImGui:Render()
     assert(#self.WindowStack == 0, "Unclosed Begin()/BeginChild(): call End()/EndChild() before Render()")
     assert(#self._treeStack == 0, "Unclosed TreeNode(): call TreePop() before Render()")
     assert(#self._groupStack == 0, "Unclosed Indent()/BeginGroup(): close layout scopes before Render()")
+    assert(#self._columnsStack == 0, "Unclosed Columns(): call EndColumns() before Render()")
     assert(#self._itemWidthStack == 0, "Unclosed PushItemWidth(): call PopItemWidth() before Render()")
     assert(self._nextItemWidth == nil, "SetNextItemWidth() was not consumed by an item before Render()")
     for _, object in pairs(self.Widgets) do
@@ -1650,6 +1793,8 @@ function ImGui:Destroy()
     table.clear(self._groupStack)
     table.clear(self._indentStack)
     table.clear(self._itemWidthStack)
+    table.clear(self._columnsStack)
+    table.clear(self._columnWidths)
     self._nextItemWidth = nil
     table.clear(self._callbacks or {})
     table.clear(self._progressBars or {})
