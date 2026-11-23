@@ -1,6 +1,6 @@
 # Roblox-ImGui
 
-A Roblox-native GUI library inspired by Dear ImGui, with an immediate-mode-style submission API and retained Roblox GUI instances.
+A Roblox-native GUI library that follows Dear ImGui's API and behavior, with an immediate-mode submission cycle and retained Roblox GUI instances.
 
 **Status:** early foundation, version 0.1.0. This is an independent Luau implementation. It is not a C++ port, does not embed Dear ImGui source, and is not an official Dear ImGui project.
 
@@ -24,7 +24,7 @@ A Roblox-native GUI library inspired by Dear ImGui, with an immediate-mode-style
 - Separators, spacing, same-line rows, explicit new lines, dummy spacers, indentation scopes, groups, legacy multi-column layouts, a configurable ImGui-style palette/layout, built-in demo
 - Retained Roblox instances keyed by widget ID; widgets are resubmitted each frame and their GUI instances are reused
 
-This is an initial foundation, not feature parity. The API follows an immediate-mode-style frame submission pattern, while rendering currently uses retained Roblox GUI instances.
+This is an initial foundation, not feature parity. The API follows Dear ImGui's frame submission conventions. Roblox GUI instances are retained and reused between submissions; they are an implementation detail, not the source of widget state or API semantics.
 
 ## Runtime compatibility
 
@@ -70,9 +70,9 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 | Method | Purpose |
 | --- | --- |
 | ImGui.new(config) | Create a GUI context; `config.Style` overrides style values |
-| NewFrame() / Render() | Start and finish a frame |
-| Begin(name, flags) / End() | Begin/end a window |
-| BeginChild(id, size) / EndChild() | Begin/end a child region |
+| NewFrame() / Render() | Start and finish a frame; every submitted widget is reconciled against its stable ID |
+| Begin(name, flags) / End() | Begin/end a window; call End() even when Begin() returns false |
+| BeginChild(id, size) / EndChild() | Begin/end a child region; child and window scopes are type-checked separately |
 | Text(text, config?) | Render text |
 | Style fields | WindowPadding, FramePadding, ItemSpacing, ItemInnerSpacing, WindowRounding, ChildRounding, FrameRounding, BorderSize, FrameBorderSize, ScrollbarSize, GrabMinSize, TitleBarHeight, colors, and font settings |
 | Button(label, config?) | Render a button |
@@ -118,6 +118,22 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 ## Upstream reference
 
 The visual and API direction is informed by [Dear ImGui](https://github.com/ocornut/imgui). Dear ImGui is MIT-licensed. This repository is an independent Roblox implementation and does not include its C++ source code.
+
+
+## Reference hierarchy
+
+The implementation uses the following reference order. Higher-priority references define behavior; lower-priority Roblox projects are consulted only for platform-specific implementation ideas.
+
+1. [Dear ImGui](https://github.com/ocornut/imgui) — authoritative API semantics, layout behavior, widget behavior, and demo expectations.
+2. [Iris](https://github.com/SirMallard/Iris) — immediate-mode lifecycle, stable widget identity, state handling, and Roblox integration architecture.
+3. [imgui-luau](https://github.com/4DBug/imgui-luau) — Luau porting patterns and Roblox backend constraints. Its EditableImage/draw-list backend is not a required dependency for this project.
+4. [WebGui Dear ImGui demo](https://jnmaloney.github.io/WebGui/imgui.html) — visual and interaction-state comparison.
+5. [rbimgui-2](https://github.com/Singularity5490/rbimgui-2) — supplementary Roblox widget construction reference.
+6. [RBX-ImGui](https://github.com/Sigmanic/RBX-ImGui) — supplementary Roblox-specific modifications; it is derived from rbimgui-2, not an independent confirmation of shared design choices.
+7. Dear ReGui archives — supplementary Roblox UI implementation ideas; archive versions are reference material, not the behavior specification.
+8. [Depthso legacy repository](https://github.com/RiseBlox/Depthso-Roblox-ImGui) — historical reference only; this repository must remain untouched.
+
+Do not copy code wholesale from references. Reimplement the supported behavior independently in Luau and document Roblox-specific deviations. When references disagree, follow the highest-priority applicable reference unless Roblox platform constraints make that behavior impractical; document the adaptation.
 
 ## License
 
