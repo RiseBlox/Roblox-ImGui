@@ -15,6 +15,7 @@ local state = {
 }
 local connection
 local firstFrame = true
+local secondWindowFirstFrame = true
 local checkCount = 0
 
 local function check(condition, message)
@@ -93,7 +94,12 @@ local function draw()
     end
     ui:End()
 
-    if ui:Begin("M03 Part C - Width Isolation", { Size = UDim2.fromOffset(320, 230), Position = UDim2.fromOffset(850, 90) }) then
+    local secondWindowFlags = { Size = UDim2.fromOffset(320, 230) }
+    if secondWindowFirstFrame then
+        secondWindowFlags.Position = UDim2.fromOffset(850, 90)
+        secondWindowFirstFrame = false
+    end
+    if ui:Begin("M03 Part C - Width Isolation", secondWindowFlags) then
         ui:Columns(2, "shared-columns", false)
         ui:SetColumnWidth(0, state.SecondWidth)
         ui:Text("Window B / left")
@@ -130,5 +136,5 @@ _G.RobloxImGuiM03PartC = {
         _G.RobloxImGuiM03PartC = nil
     end,
 }
-print("[M03 Part C] Started. Test column switching, width persistence, borders, repeated IDs, and parent-flow restoration.")
+print("[M03 Part C] Started. Test column switching, spacing, width persistence, borders, repeated IDs, parent-flow restoration, and dragging both windows.")
 print("[M03 Part C] Stop with _G.RobloxImGuiM03PartC.Destroy().")
