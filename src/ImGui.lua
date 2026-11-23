@@ -1624,13 +1624,16 @@ end
 
 local function resolvedColumnWidths(columns)
     local available = columnAvailableWidth(columns)
+    local gap = columns.Gap or 0
+    local totalGaps = gap * math.max(columns.Count - 1, 0)
+    local usable = math.max(available - totalGaps, columns.Count)
     local fixedTotal, flexibleCount = 0, 0
     for index = 1, columns.Count do
         local fixed = columns.Widths[index]
         if fixed then fixedTotal += fixed else flexibleCount += 1 end
     end
-    local fixedScale = fixedTotal > available and available / fixedTotal or 1
-    local remaining = math.max(available - math.min(fixedTotal, available), 0)
+    local fixedScale = fixedTotal > usable and usable / fixedTotal or 1
+    local remaining = math.max(usable - math.min(fixedTotal, usable), 0)
     local flexibleWidth = flexibleCount > 0 and remaining / flexibleCount or 0
     local result = {}
     for index = 1, columns.Count do
@@ -1648,8 +1651,8 @@ local function refreshColumnWidths(self, columns)
     end
     local boundary = 0
     for index, border in ipairs(columns.Borders) do
-        boundary += widths[index]
-        border.Position = UDim2.fromOffset(math.floor(boundary - 1), 0)
+        boundary += widths[index] + (columns.Gap or 0)
+        border.Position = UDim2.fromOffset(math.floor(boundary - (columns.Gap or 0) / 2), 0)
         -- Scale to the container's final auto-sized height; an offset sampled
         -- during submission can be stale before Roblox completes layout.
         border.Size = UDim2.new(0, 1, 1, 0)
@@ -1674,14 +1677,17 @@ function ImGui:Columns(count, id, border)
         Name = "ColumnsContent", Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
     })
+    local gap = math.max(0, self.Style.ItemSpacing.X)
     local layout = content:FindFirstChildOfClass("UIListLayout")
     if not layout then
         layout = make("UIListLayout", content, {
             FillDirection = Enum.FillDirection.Horizontal,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, 0),
+            Padding = UDim.new(0, gap),
             VerticalAlignment = Enum.VerticalAlignment.Top,
         })
+    else
+        layout.Padding = UDim.new(0, gap)
     end
 
     -- Width state is scoped just like widget identity: two windows or child
@@ -1691,7 +1697,7 @@ function ImGui:Columns(count, id, border)
     local columns = {
         Key = key, ScopedKey = scopedKey, ParentScope = parentScope,
         Count = count, Index = 1, Parent = parent, Container = container, Content = content,
-        Frames = {}, Borders = {}, Widths = widths, PreviousLastItem = previousLastItem,
+        Frames = {}, Borders = {}, Widths = widths, Gap = gap, PreviousLastItem = previousLastItem,
         PreviousOrder = self._order - 1, Border = border ~= false,
     }
     for index = 1, count do
