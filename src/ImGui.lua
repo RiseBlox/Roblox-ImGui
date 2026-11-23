@@ -117,13 +117,13 @@ function ImGui:_widget(id, className, parent, properties)
         local function activateOwner()
             if currentWindow and currentWindow.Focus then currentWindow.Focus() end
         end
-        table.insert(self._connections, self:_connect(object.InputBegan, function(input)
+        self:_connect(object.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
                 local accepted = currentWindow and currentWindow.Focus and currentWindow.Focus(input.Position) == true
                 object:SetAttribute("ImGuiInputAllowed", accepted == true)
             end
-        end))
+        end)
     end
     return object
 end
@@ -278,31 +278,31 @@ function ImGui:_getWindow(name, flags)
     self:_connect(title.MouseLeave, function()
         if self._focusedWindowName ~= name then title.BackgroundColor3 = style.TitleBg end
     end)
-    table.insert(self._connections, self:_connect(title.InputBegan, function(input)
+    self:_connect(title.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
             focusWindow(input.Position)
         end
-    end))
+    end)
 
     local dragOrigin, startPosition
-    table.insert(self._connections, self:_connect(title.InputBegan, function(input)
+    self:_connect(title.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             if focusWindow(input.Position) ~= true then return end
             dragOrigin, startPosition = input.Position, root.Position
         end
-    end))
-    table.insert(self._connections, self:_connect(UserInputService.InputChanged, function(input)
+    end)
+    self:_connect(UserInputService.InputChanged, function(input)
         if not dragOrigin or not startPosition then return end
         if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
         local delta = input.Position - dragOrigin
         root.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
-    end))
-    table.insert(self._connections, self:_connect(UserInputService.InputEnded, function(input)
+    end)
+    self:_connect(UserInputService.InputEnded, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragOrigin, startPosition = nil, nil
         end
-    end))
+    end)
     -- Clicking empty space in the window body also activates the window.
     local function focusOnPointer(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
@@ -310,8 +310,8 @@ function ImGui:_getWindow(name, flags)
             focusWindow(input.Position)
         end
     end
-    table.insert(self._connections, self:_connect(root.InputBegan, focusOnPointer))
-    table.insert(self._connections, self:_connect(content.InputBegan, focusOnPointer))
+    self:_connect(root.InputBegan, focusOnPointer)
+    self:_connect(content.InputBegan, focusOnPointer)
     window = { Name = name, Root = root, Title = title, Content = content, Visible = true, Focus = focusWindow, FocusOrder = self._windowOrder }
     self.Windows[name] = window
     return window
@@ -458,7 +458,7 @@ function ImGui:Text(text, config)
         refreshJustification()
         if label:GetAttribute("ImGuiJustifyConnected") ~= true then
             label:SetAttribute("ImGuiJustifyConnected", true)
-            table.insert(self._connections, label:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshJustification))
+            self:_connect(label:GetPropertyChangedSignal("AbsoluteSize"), refreshJustification)
         end
     end
     return label
@@ -505,33 +505,33 @@ function ImGui:Button(label, config)
         button:SetAttribute("ImGuiHovered", false)
         button:SetAttribute("ImGuiPressed", false)
 
-        table.insert(self._connections, self:_connect(button.MouseEnter, function()
+        self:_connect(button.MouseEnter, function()
             button:SetAttribute("ImGuiHovered", true)
             refreshButtonVisual()
-        end))
-        table.insert(self._connections, self:_connect(button.MouseLeave, function()
+        end)
+        self:_connect(button.MouseLeave, function()
             button:SetAttribute("ImGuiHovered", false)
             refreshButtonVisual()
-        end))
-        table.insert(self._connections, self:_connect(button.InputBegan, function(input)
+        end)
+        self:_connect(button.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
                 button:SetAttribute("ImGuiPressed", true)
                 refreshButtonVisual()
             end
-        end))
-        table.insert(self._connections, self:_connect(UserInputService.InputEnded, function(input)
+        end)
+        self:_connect(UserInputService.InputEnded, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
                 button:SetAttribute("ImGuiPressed", false)
                 refreshButtonVisual()
             end
-        end))
-        table.insert(self._connections, self:_connect(button.Activated, function()
+        end)
+        self:_connect(button.Activated, function()
             if button:GetAttribute("ImGuiInputAllowed") ~= true then return end
             local callback = self._callbacks and self._callbacks[key]
             if callback then callback() end
-        end))
+        end)
     end
 
     self._callbacks = self._callbacks or {}
@@ -971,22 +971,22 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         track:SetAttribute("ImGuiHoverConnected", true)
         track:SetAttribute("ImGuiHovered", false)
         track:SetAttribute("ImGuiPressed", false)
-        table.insert(self._connections, self:_connect(track.MouseEnter, function()
+        self:_connect(track.MouseEnter, function()
             track:SetAttribute("ImGuiHovered", true)
-        end))
-        table.insert(self._connections, self:_connect(track.MouseLeave, function()
+        end)
+        self:_connect(track.MouseLeave, function()
             track:SetAttribute("ImGuiHovered", false)
-        end))
-        table.insert(self._connections, self:_connect(track.InputBegan, function(input)
+        end)
+        self:_connect(track.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 track:SetAttribute("ImGuiPressed", true)
             end
-        end))
-        table.insert(self._connections, self:_connect(UserInputService.InputEnded, function(input)
+        end)
+        self:_connect(UserInputService.InputEnded, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 track:SetAttribute("ImGuiPressed", false)
             end
-        end))
+        end)
     end
     local function refreshSliderVisual()
         local pressed = track:GetAttribute("ImGuiPressed") == true
@@ -1035,9 +1035,9 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         self:_connect(track.InputEnded, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
         end)
-        table.insert(self._connections, self:_connect(UserInputService.InputChanged, function(input)
+        self:_connect(UserInputService.InputChanged, function(input)
             if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then update(input) end
-        end))
+        end)
     end
     return value
 end
@@ -1159,13 +1159,13 @@ function ImGui:DragFloat(label, value, speed, minValue, maxValue, callback, id, 
                 drag:SetAttribute("ImGuiIsDragging", false)
             end
         end)
-        table.insert(self._connections, self:_connect(UserInputService.InputChanged, function(input)
+        self:_connect(UserInputService.InputChanged, function(input)
             if not dragging or lastX == nil then return end
             if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
             local nextX = input.Position.X
             applyDelta(nextX - lastX, nextX)
             lastX = nextX
-        end))
+        end)
         self:_connect(drag.MouseEnter, function() drag.BackgroundColor3 = self.Style.FrameBgHovered end)
         self:_connect(drag.MouseLeave, function() drag.BackgroundColor3 = self.Style.FrameBg end)
     end
@@ -1346,7 +1346,7 @@ function ImGui:InputText(label, value, callback, config)
     if not input:IsFocused() then input.Text = tostring(value or "") end
     if input:GetAttribute("ImGuiTextConnected") ~= true then
         input:SetAttribute("ImGuiTextConnected", true)
-        input:GetPropertyChangedSignal("Text"):Connect(function()
+        self:_connect(input:GetPropertyChangedSignal("Text"), function()
             local fn = self._callbacks and self._callbacks[key]
             if fn then fn(input.Text) end
         end)
