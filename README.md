@@ -143,15 +143,15 @@ MIT. See [LICENSE](LICENSE).
 ### Text, slider, and separator layout
 
 - `Text()` wraps to the available content width by default; pass `{ Wrap = false }` to opt out.
-- `SliderFloat()` / `SliderInt()` use a visible accent fill and grab to communicate the current value.
-- Bounded `DragFloat()` / `DragInt()` controls show an accent fill proportional to their current value; integer drags display whole numbers.
+- `SliderFloat()` / `SliderInt()` use an unfilled track and a single movable grab block; no progress-fill segment is rendered.
+- `DragFloat()` / `DragInt()` use a draggable grab control; integer drags display whole numbers.
 - `Separator(text)` uses a transparent label over the window content, with separator lines ending around the measured text width.
 
 
 ### Slider interaction and text alignment
 
 - Slider tracks resolve focus against their owning window before accepting pointer input; this enables both float and integer slider callbacks.
-- Slider fill and grab positions update directly from the pointer's horizontal position while dragging.
+- The slider grab position updates directly from the pointer's horizontal position while dragging.
 - `Text()` uses custom dynamic justified wrapping by measuring words and distributing spacing across wrapped lines; Roblox does not provide a `Justify` enum value. Set `Align = Enum.TextXAlignment.Left`, `Center`, or `Right` to use native alignment instead. Rich-text labels retain Roblox native wrapping.
 
 
