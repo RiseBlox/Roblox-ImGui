@@ -147,4 +147,5 @@ MIT. See [LICENSE](LICENSE).
 - `CalcItemWidth()` reports the effective width without consuming a pending next-item width.
 - Positive widths are pixel widths. Negative widths are relative to the available content width: for example, `-100` leaves a 100-pixel right margin.
 - Width-aware controls include sliders, drag controls, numeric inputs, and text inputs. Buttons and ordinary text retain their natural/default layout.
+- Sliders use an unfilled track with one movable grab block; they do not render a progress-fill segment.
 - Widths are clamped to the current available content width, accounting for the active window/child/indent content padding.
