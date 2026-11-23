@@ -88,10 +88,16 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 | SliderFloat / SliderInt | Render numeric sliders |
 | SetNextItemWidth(width) | Set the width of the next width-aware control; negative values leave space at the right edge |
 | PushItemWidth(width) / PopItemWidth() | Apply and restore a width for subsequent controls; negative values are right-edge-relative |
-| CalcItemWidth() | Calculate the effective width from the next-item setting, width stack, or default |\n| DragFloat / DragInt | Adjust values by horizontal dragging; accepts speed, optional minimum/maximum, callback, and ID |\n| InputFloat / InputInt | Edit numeric values in a text field; commits on focus loss; config supports ID, Min, Max, Decimals, and Placeholder |\n| ColorEdit(label, color, callback?, id?) | Show a clickable color swatch that expands into HSV controls; callback receives a Color3 |\n| ColorPicker(label, color, callback?, id?) | Show a live color swatch and always-visible HSV controls; callback receives a Color3 |
+| CalcItemWidth() | Calculate the effective width from the next-item setting, width stack, or default |
+| DragFloat / DragInt | Adjust values by horizontal dragging; accepts speed, optional minimum/maximum, callback, and ID |
+| InputFloat / InputInt | Edit numeric values in a text field; commits on focus loss; config supports ID, Min, Max, Decimals, and Placeholder |
+| ColorEdit(label, color, callback?, id?) | Show a clickable color swatch that expands into HSV controls; callback receives a Color3 |
+| ColorPicker(label, color, callback?, id?) | Show a live color swatch and always-visible HSV controls; callback receives a Color3 |
 | InputText(label, value, callback, config?) | Render a text input |
 | Separator(text?) / Spacing(amount?) | Separator and vertical spacing helpers; amount is pixel height |
-| SameLine() / NewLine() | Place the next item beside the previous item, or resume vertical flow |\n| Columns(count, id?, border?) / NextColumn() / EndColumns() | Begin a legacy multi-column layout, advance/wrap between columns, and close it |\n| GetColumnIndex() / GetColumnWidth(index?) / SetColumnWidth(index, width) | Query the zero-based active column and read/set column widths in pixels |
+| SameLine() / NewLine() | Place the next item beside the previous item, or resume vertical flow |
+| Columns(count, id?, border?) / NextColumn() / EndColumns() | Begin a legacy multi-column layout, advance/wrap between columns, and close it |
+| GetColumnIndex() / GetColumnWidth(index?) / SetColumnWidth(index, width) | Query the zero-based active column and read/set column widths in pixels |
 | Dummy(size) | Add an invisible layout item with a UDim2 size |
 | Indent(width?) / Unindent() | Open/close an indented vertical layout scope; default width is 14 pixels |
 | BeginGroup() / EndGroup() | Open/close a grouped vertical layout scope |
