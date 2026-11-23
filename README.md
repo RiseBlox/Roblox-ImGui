@@ -22,7 +22,10 @@ A Roblox-native GUI library that follows Dear ImGui's API and behavior, with an 
 - ID stack: PushID, PopID, GetID
 - Text, buttons, checkboxes, radio buttons, selectables, combo boxes, collapsing headers, tree nodes, bullet text, images, progress bars, float/integer sliders, drag controls, numeric inputs, text inputs, and HSV color edit/picker controls
 - Separators, spacing, same-line rows, explicit new lines, dummy spacers, indentation scopes, groups, legacy multi-column layouts, a configurable ImGui-style palette/layout, built-in demo
-- Retained Roblox instances keyed by widget ID; widgets are resubmitted each frame and their GUI instances are reused
+- Retained Roblox instances keyed by window/child/ID scope; widgets are resubmitted each frame and their GUI instances are reused
+- Callback and progress-controller identity follows the same scoped IDs as widget instances, preventing same-ID collisions between windows and child regions
+- Centralized event-connection ownership; Destroy disconnects all widget, window, and global-input listeners
+- Type-checked window/child scopes and balanced ID, tree, group, column, and item-width scopes
 
 This is an initial foundation, not feature parity. The API follows Dear ImGui's frame submission conventions. Roblox GUI instances are retained and reused between submissions; they are an implementation detail, not the source of widget state or API semantics.
 
