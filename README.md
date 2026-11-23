@@ -132,6 +132,6 @@ MIT. See [LICENSE](LICENSE).
 
 ### Button and slider interaction feedback
 
-- Buttons use distinct normal, hovered, and pressed states. The pressed color remains active while the pointer is held down; moving off the button cancels the pressed visual state.
+- Buttons use a dark idle color, the brightest blue on hover, and a lighter mid-tone while pressed. The pressed color remains active while the pointer is held down; moving off the button cancels the pressed visual state.
 - Float and integer sliders highlight the track on hover and use a brighter, slightly larger grab while hovered or actively dragged. Their active track state is distinct from the idle and hover states.
 - These visual states use the configurable `Button`, `ButtonHovered`, `ButtonActive`, `FrameBg`, `FrameBgHovered`, `FrameBgActive`, and `SliderGrab` style colors.
