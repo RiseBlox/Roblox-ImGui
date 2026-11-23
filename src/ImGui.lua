@@ -962,37 +962,33 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
         track:SetAttribute("ImGuiHoverConnected", true)
         track:SetAttribute("ImGuiHovered", false)
         track:SetAttribute("ImGuiPressed", false)
-        local function refreshSliderVisual()
-            local pressed = track:GetAttribute("ImGuiPressed") == true
-            local hovered = track:GetAttribute("ImGuiHovered") == true
-            -- The track stays unfilled; only the movable grab changes state.
-            track.BackgroundColor3 = hovered and not pressed and self.Style.FrameBgHovered or self.Style.FrameBg
-            track.BackgroundTransparency = hovered and not pressed and 0.08 or self.Style.FrameBgTransparency
-            grab.BackgroundColor3 = pressed and self.Style.ButtonActive
-                or hovered and self.Style.ButtonHovered or self.Style.SliderGrab
-            local grabWidth = pressed and 14 or hovered and 12 or self.Style.GrabMinSize
-            grab.Size = UDim2.fromOffset(grabWidth, 18)
-        end
         table.insert(self._connections, track.MouseEnter:Connect(function()
             track:SetAttribute("ImGuiHovered", true)
-            refreshSliderVisual()
         end))
         table.insert(self._connections, track.MouseLeave:Connect(function()
             track:SetAttribute("ImGuiHovered", false)
-            if track:GetAttribute("ImGuiPressed") ~= true then refreshSliderVisual() end
         end))
         table.insert(self._connections, track.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 track:SetAttribute("ImGuiPressed", true)
-                refreshSliderVisual()
             end
         end))
-        table.insert(self._connections, track.InputEnded:Connect(function(input)
+        table.insert(self._connections, UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 track:SetAttribute("ImGuiPressed", false)
-                refreshSliderVisual()
             end
         end))
+    end
+    local function refreshSliderVisual()
+        local pressed = track:GetAttribute("ImGuiPressed") == true
+        local hovered = track:GetAttribute("ImGuiHovered") == true
+        -- Reapply interaction colors after the retained widget's per-frame defaults.
+        track.BackgroundColor3 = hovered and not pressed and self.Style.FrameBgHovered or self.Style.FrameBg
+        track.BackgroundTransparency = hovered and not pressed and 0.08 or self.Style.FrameBgTransparency
+        grab.BackgroundColor3 = pressed and self.Style.ButtonActive
+            or hovered and self.Style.ButtonHovered or self.Style.SliderGrab
+        local grabWidth = pressed and 14 or hovered and 12 or self.Style.GrabMinSize
+        grab.Size = UDim2.fromOffset(grabWidth, 18)
     end
     local function positionGrab(alpha)
         grab.Position = UDim2.new(math.clamp(alpha, 0, 1), 0, 0.5, 0)
@@ -1013,6 +1009,7 @@ function ImGui:SliderFloat(label, value, minValue, maxValue, callback, id)
     valueText.Text = string.format("%.3f", value)
     self._callbacks = self._callbacks or {}
     self._callbacks[key] = callback
+    refreshSliderVisual()
     if track:GetAttribute("ImGuiSliderConnected") ~= true then
         track:SetAttribute("ImGuiSliderConnected", true)
         local dragging = false
