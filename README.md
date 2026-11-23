@@ -85,7 +85,10 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 | Image(image, size?, config?) | Render a Roblox image asset/content ID |
 | RadioButton(label, active, callback?, id?) | Render a radio button; callback runs when clicked |
 | ProgressBar(fraction, size?, overlay?, id?) | Render a normalized progress bar |
-| SliderFloat / SliderInt | Render numeric sliders |\n| DragFloat / DragInt | Adjust values by horizontal dragging; accepts speed, optional minimum/maximum, callback, and ID |\n| InputFloat / InputInt | Edit numeric values in a text field; commits on focus loss; config supports ID, Min, Max, Decimals, and Placeholder |\n| ColorEdit(label, color, callback?, id?) | Show a clickable color swatch that expands into HSV controls; callback receives a Color3 |\n| ColorPicker(label, color, callback?, id?) | Show a live color swatch and always-visible HSV controls; callback receives a Color3 |
+| SliderFloat / SliderInt | Render numeric sliders |
+| SetNextItemWidth(width) | Set the width of the next width-aware control; negative values leave space at the right edge |
+| PushItemWidth(width) / PopItemWidth() | Apply and restore a width for subsequent controls; negative values are right-edge-relative |
+| CalcItemWidth() | Calculate the effective width from the next-item setting, width stack, or default |\n| DragFloat / DragInt | Adjust values by horizontal dragging; accepts speed, optional minimum/maximum, callback, and ID |\n| InputFloat / InputInt | Edit numeric values in a text field; commits on focus loss; config supports ID, Min, Max, Decimals, and Placeholder |\n| ColorEdit(label, color, callback?, id?) | Show a clickable color swatch that expands into HSV controls; callback receives a Color3 |\n| ColorPicker(label, color, callback?, id?) | Show a live color swatch and always-visible HSV controls; callback receives a Color3 |
 | InputText(label, value, callback, config?) | Render a text input |
 | Separator(text?) / Spacing(amount?) | Separator and vertical spacing helpers; amount is pixel height |
 | SameLine() / NewLine() | Place the next item beside the previous item, or resume vertical flow |
@@ -100,7 +103,7 @@ Run [`examples/VisualParityTest.client.lua`](examples/VisualParityTest.client.lu
 
 1. Core interaction and lifecycle: frame lifecycle guards, stable widget identity across windows/children, click-to-focus and click-to-front, title hover states, nested scopes, and context cleanup. Initial interaction smoke test: \`examples/Milestone01InteractionTest.client.lua\`.
 2. Widget coverage: core controls, Part A selection/tree/display widgets, Part B numeric controls, and Part C color controls; tabs, tables, menus, popups, and modal dialogs remain future widget work.
-3. Layout: Part A basic primitives (SameLine, NewLine, Spacing, Dummy, Indent/Unindent, BeginGroup/EndGroup); Part B item widths and alignment; Part C columns; Part D tables and advanced layout.
+3. Layout: Part A basic primitives (SameLine, NewLine, Spacing, Dummy, Indent/Unindent, BeginGroup/EndGroup); Part B item widths and alignment (`examples/Milestone03PartB.client.lua`); Part C columns; Part D tables and advanced layout.
 4. Interaction: keyboard navigation, focus, shortcuts, gamepad navigation, drag-and-drop.
 5. Drawing: draw lists, primitives, clipping, gradients, images and custom callbacks.
 6. Window systems: resizing, collapsing, docking and multi-window management where Roblox permits.
@@ -135,3 +138,13 @@ MIT. See [LICENSE](LICENSE).
 - Buttons use a dark idle color, the brightest blue on hover, and a lighter mid-tone while pressed. The pressed color remains active while the pointer is held down; moving off the button cancels the pressed visual state.
 - Float and integer sliders highlight the track on hover and use a brighter, slightly larger grab while hovered or actively dragged. Their active track state is distinct from the idle and hover states.
 - These visual states use the configurable `Button`, `ButtonHovered`, `ButtonActive`, `FrameBg`, `FrameBgHovered`, `FrameBgActive`, and `SliderGrab` style colors.
+
+
+### Item widths and alignment (M03 Part B)
+
+- `SetNextItemWidth(width)` applies to the next width-aware control only.
+- `PushItemWidth(width)` / `PopItemWidth()` scope a width across multiple controls. The width stack must be balanced before `Render()`.
+- `CalcItemWidth()` reports the effective width without consuming a pending next-item width.
+- Positive widths are pixel widths. Negative widths are relative to the available content width: for example, `-100` leaves a 100-pixel right margin.
+- Width-aware controls include sliders, drag controls, numeric inputs, and text inputs. Buttons and ordinary text retain their natural/default layout.
+- Widths are clamped to the current available content width, accounting for the active window/child/indent content padding.
