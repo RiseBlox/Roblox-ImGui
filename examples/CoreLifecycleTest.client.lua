@@ -164,11 +164,23 @@ runTest("Widget IDs are isolated between windows and child scopes", function(get
     ui:End()
     ui:Render()
 
-    local count = 0
-    for _ in pairs(ui.Widgets) do
-        count += 1
+    local expectedKeys = {
+        "Window:First/same",
+        "Window:First/Child:Nested/same",
+        "Window:Second/same",
+    }
+    local seen = {}
+    for _, key in ipairs(expectedKeys) do
+        local widget = ui.Widgets[key]
+        check(widget ~= nil, "Missing retained widget for scoped ID: " .. key)
+        check(widget:IsA("TextLabel"), "Expected a TextLabel for scoped ID: " .. key)
+        for previousKey, previousWidget in pairs(seen) do
+            check(widget ~= previousWidget,
+                "Scoped IDs unexpectedly share one instance: " .. previousKey .. " and " .. key)
+        end
+        seen[key] = widget
     end
-    check(count == 3, "Expected three distinct retained widget instances; got " .. tostring(count))
+    check(#expectedKeys == 3, "Expected three distinct text widgets across the two windows and child scope")
 end)
 
 runTest("Callbacks are isolated between windows", function(getUI)
@@ -220,8 +232,9 @@ runTest("RadioButton and ProgressBar still render", function(getUI)
 
     check(selected == true, "RadioButton should return its selected state")
     check(ui.Widgets["Window:Widgets/option-a"] ~= nil, "RadioButton widget was not created")
-    local fill = bar:FindFirstChild("Fill")
-    local overlay = bar:FindFirstChild("Overlay")
+    check(type(bar) == "table" and bar.Frame ~= nil, "ProgressBar should return a controller with a Frame")
+    local fill = bar.Frame:FindFirstChild("Fill")
+    local overlay = bar.Frame:FindFirstChild("Overlay")
     check(fill ~= nil and math.abs(fill.Size.X.Scale - 0.65) < 0.001, "ProgressBar fill fraction is incorrect")
     check(overlay ~= nil and overlay.Text == "65%", "ProgressBar overlay text is incorrect")
 end)
