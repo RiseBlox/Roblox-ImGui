@@ -82,6 +82,14 @@ local function draw()
         ui:Separator("Parent layout restoration")
         ui:Text("This item should use the full parent width after EndColumns().")
         ui:Button("Full-width parent button", { Callback = function() print("[M03 Part C] Parent flow restored") end })
+
+        ui:Separator("Width identity across windows")
+        ui:Columns(2, "shared-columns", false)
+        ui:SetColumnWidth(0, state.FirstWidth)
+        ui:Text("Window A / left")
+        ui:NextColumn()
+        ui:Text("Window A / right")
+        ui:EndColumns()
     end
     ui:End()
 
