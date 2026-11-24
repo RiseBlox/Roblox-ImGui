@@ -1650,7 +1650,10 @@ local function refreshColumnWidths(self, columns)
         if not padding then
             padding = make("UIPadding", column, { Name = "ImGuiColumnPadding" })
         end
-        local inset = (columns.Gap or 0) / 2
+        -- Reserve the full item-spacing width on both sides of each divider.
+        -- This keeps the visual clearance symmetric even with the divider drawn
+        -- exactly on the boundary between adjacent column frames.
+        local inset = columns.Gap or 0
         padding.PaddingLeft = UDim.new(0, inset)
         padding.PaddingRight = UDim.new(0, inset)
     end
