@@ -1,0 +1,50 @@
+name: Luau build and tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  roblox-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Luau CLI
+        run: |
+          curl -fsSL -o luau.zip https://github.com/luau-lang/luau/releases/latest/download/luau-ubuntu.zip
+          unzip -q luau.zip -d luau
+          chmod +x luau/*
+          echo "$PWD/luau" >> "$GITHUB_PATH"
+
+      - name: Build Roblox modules
+        env:
+          IMGUI_BUNDLE_STRICT: "1"
+        run: python3 tools/bundle.py
+
+      - name: Compile generated modules
+        run: |
+          luau-compile --null build/ImGui.luau
+          luau-compile --null build/ImGuiWorker.client.luau
+          ! grep -q "require" build/ImGuiWorker.client.luau
+          sed 's|require(script:WaitForChild("Impl"))|nil|' build/ImGuiTyped.luau > /tmp/ImGuiTyped.luau
+          luau-analyze /tmp/ImGuiTyped.luau
+
+      - name: Run Roblox-mock tests
+        run: |
+          python3 tools/test/run.py --main tools/test/scripts/t_readme.luau --frames 30 --quiet --roblox --timeout 300
+          python3 tools/test/run.py --main tools/test/scripts/t_cached_window.luau --frames 130 --quiet --roblox --timeout 300
+          python3 tools/test/run.py --main tools/test/scripts/t_fixes.luau --frames 55 --quiet --roblox --timeout 300
+          python3 tools/test/run.py --main tools/test/scripts/t_tables.luau --frames 150 --quiet --roblox --timeout 300
+          python3 tools/test/run.py --main tools/test/scripts/t_dock.luau --frames 60 --quiet --roblox --timeout 300
+          python3 tools/test/run.py --frames 400 --open --quiet --roblox --timeout 600
