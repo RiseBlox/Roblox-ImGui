@@ -1,0 +1,10 @@
+[package]
+name = "riseblox/roblox-imgui"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+license = "MIT"
+description = "Dear ImGui 1.93.0 WIP source port to Luau with a Roblox backend"
+repository = "https://github.com/RiseBlox/Roblox-ImGui"
+
+[dependencies]

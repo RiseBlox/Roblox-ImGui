@@ -1,0 +1,4 @@
+.opencode/
+Packages/
+wally.lock
+__pycache__/
